@@ -15,6 +15,7 @@ use Milpa\Exceptions\Plugin\PluginDependencyException;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Runtime\Kernel;
+use Milpa\Runtime\Tests\Fixtures\CommandProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\DependentPlugin;
 use Milpa\Runtime\Tests\Fixtures\ProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\RecordingToolRegistry;
@@ -157,5 +158,25 @@ final class KernelBootTest extends TestCase
         $kernel = Kernel::boot(['plugins' => [ToolProvidingPlugin::class]]);
 
         $this->assertNull($kernel->toolRegistry());
+    }
+
+    public function testACommandProvidingPluginsCommandsAreDiscoveredAndExposedViaTheKernel(): void
+    {
+        $kernel = Kernel::boot(['plugins' => [CommandProvidingPlugin::class]]);
+
+        $commands = $kernel->commands();
+        $this->assertCount(1, $commands);
+        $this->assertSame('fixture:greet', $commands[0]->name);
+        $this->assertSame('A fixture command that returns a greeting.', $commands[0]->description);
+        $this->assertIsCallable($commands[0]->handler);
+        $this->assertSame('hello from fixture:greet', ($commands[0]->handler)());
+        $this->assertNull($commands[0]->inputSchema);
+    }
+
+    public function testAPluginWithoutCommandProviderInterfaceContributesNoCommands(): void
+    {
+        $kernel = Kernel::boot(['plugins' => [ProvidingPlugin::class]]);
+
+        $this->assertSame([], $kernel->commands());
     }
 }

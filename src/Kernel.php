@@ -46,9 +46,11 @@ use Psr\Log\NullLogger;
 final class Kernel
 {
     /**
-     * @param list<object> $plugins           Every instantiated plugin, in the order given by
-     *                                        `$config['plugins']` (includes vetoed ones).
-     * @param list<string> $bootedPluginNames Names of plugins whose `boot()` actually ran.
+     * @param list<object>            $plugins           Every instantiated plugin, in the order given by
+     *                                                   `$config['plugins']` (includes vetoed ones).
+     * @param list<string>            $bootedPluginNames Names of plugins whose `boot()` actually ran.
+     * @param list<CommandDefinition> $commands          Commands collected from every booted
+     *                                                   `CommandProviderInterface` plugin.
      */
     private function __construct(
         private readonly DIContainerInterface $container,
@@ -58,6 +60,7 @@ final class Kernel
         private readonly array $bootedPluginNames,
         private readonly string $root,
         private readonly ?ToolRegistryInterface $toolRegistry,
+        private readonly array $commands,
     ) {
     }
 
@@ -118,13 +121,13 @@ final class Kernel
 
         $dispatcher->dispatch('capability.resolved', ['event' => new CapabilityResolvedEvent($loadOrder)]);
 
-        [$bootedNames, $routes] = self::bootPlugins($loadOrder, $pluginsByClass, $dispatcher, $toolRegistry);
+        [$bootedNames, $routes, $commands] = self::bootPlugins($loadOrder, $pluginsByClass, $dispatcher, $toolRegistry);
 
         $router = new Router(...$routes);
 
         $dispatcher->dispatch('kernel.booted', ['event' => new KernelBootedEvent($bootedNames)]);
 
-        return new self($container, $dispatcher, $router, $plugins, $bootedNames, $root, $toolRegistry);
+        return new self($container, $dispatcher, $router, $plugins, $bootedNames, $root, $toolRegistry, $commands);
     }
 
     /** The DI container every plugin and controller was resolved through. */
@@ -178,6 +181,18 @@ final class Kernel
     }
 
     /**
+     * Every command collected from a booted `CommandProviderInterface` plugin's `commands()` —
+     * the command-table counterpart of {@see router()}. A host CLI registers these as subcommands
+     * in addition to its own built-ins.
+     *
+     * @return list<CommandDefinition>
+     */
+    public function commands(): array
+    {
+        return $this->commands;
+    }
+
+    /**
      * @param list<class-string> $pluginClasses
      *
      * @return list<PluginInterface>
@@ -227,14 +242,14 @@ final class Kernel
 
     /**
      * Runs the boot loop over the dependency-ordered plugin list: emits `plugin.booting`
-     * (stoppable), calls `boot()` unless vetoed, emits `plugin.booted`, then collects routes
-     * and registers tools for the plugins that actually booted.
+     * (stoppable), calls `boot()` unless vetoed, emits `plugin.booted`, then collects routes,
+     * collects commands, and registers tools for the plugins that actually booted.
      *
      * @param array<array{name: string, class: string, provides?: array<string>, requires?: array<string>}> $loadOrder      Same shape
      *                                                                                                                      `ContractResolver::getLoadOrder()` returns — not declared `list<>`, mirroring its own return type exactly.
      * @param array<class-string, PluginInterface>                                                          $pluginsByClass
      *
-     * @return array{0: list<string>, 1: list<\Milpa\Http\Routing\Route>}
+     * @return array{0: list<string>, 1: list<\Milpa\Http\Routing\Route>, 2: list<CommandDefinition>}
      */
     private static function bootPlugins(
         array $loadOrder,
@@ -244,6 +259,7 @@ final class Kernel
     ): array {
         $bootedNames = [];
         $routes = [];
+        $commands = [];
 
         foreach ($loadOrder as $entry) {
             $plugin = $pluginsByClass[$entry['class']];
@@ -273,12 +289,17 @@ final class Kernel
                     $routes[] = $route;
                 }
             }
+            if ($plugin instanceof CommandProviderInterface) {
+                foreach ($plugin->commands() as $command) {
+                    $commands[] = $command;
+                }
+            }
             if ($toolRegistry !== null && $plugin instanceof ToolProviderInterface) {
                 $plugin->registerTools($toolRegistry);
             }
         }
 
-        return [$bootedNames, $routes];
+        return [$bootedNames, $routes, $commands];
     }
 
     /** @throws AttributeNotFoundException */
