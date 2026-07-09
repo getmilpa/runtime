@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/getmilpa/runtime/compare/v0.1.0...v0.1.1) (2026-07-09)
+
+
+### Miscellaneous Chores
+
+* release 0.1.1 ([c46494e](https://github.com/getmilpa/runtime/commit/c46494e0aaddffd4d091c8af0ee95d9e2e6b7f06))
+
 ## 0.1.0 (2026-07-08)
 
 
