@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/getmilpa/runtime/compare/v0.1.1...v0.2.0) (2026-07-09)
+
+
+### Features
+
+* CommandProviderInterface — plugins declare their own commands ([03fd82f](https://github.com/getmilpa/runtime/commit/03fd82fc47cb92421cd030a0a00505ca8421cc2d))
+
+
+### Miscellaneous Chores
+
+* release 0.2.0 ([117f776](https://github.com/getmilpa/runtime/commit/117f776626419b466073396778db7c7f84e74a7e))
+
 ## [0.1.1](https://github.com/getmilpa/runtime/compare/v0.1.0...v0.1.1) (2026-07-09)
 
 
