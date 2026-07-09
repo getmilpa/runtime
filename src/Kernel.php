@@ -6,21 +6,21 @@ namespace Milpa\Runtime;
 
 use Milpa\Attributes\PluginMetadata;
 use Milpa\Container\DIContainer;
+use Milpa\Events\CapabilityResolvedEvent;
 use Milpa\Events\InterceptionSlot;
+use Milpa\Events\KernelBootedEvent;
+use Milpa\Events\PluginBootedEvent;
+use Milpa\Events\PluginBootingEvent;
 use Milpa\Eventing\EventDispatcher;
 use Milpa\Exceptions\AttributeNotFoundException;
+use Milpa\Http\Routing\Router;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Interfaces\Plugin\PluginInterface;
 use Milpa\Interfaces\Tooling\ToolProviderInterface;
 use Milpa\Interfaces\Tooling\ToolRegistryInterface;
 use Milpa\Plugin\ContractResolver;
-use Milpa\Runtime\Events\CapabilityResolvedEvent;
-use Milpa\Runtime\Events\KernelBootedEvent;
-use Milpa\Runtime\Events\PluginBootedEvent;
-use Milpa\Runtime\Events\PluginBootingEvent;
 use Milpa\Runtime\Http\RouteProviderInterface;
-use Milpa\Runtime\Http\Router;
 use Milpa\Runtime\Support\RootResolver;
 use Milpa\Services\CapabilityGraphChecker;
 use Psr\Log\LoggerInterface;
@@ -35,7 +35,7 @@ use Psr\Log\NullLogger;
  * `provides`-\>`requires` order (ordering computed by `milpa/plugin`'s {@see ContractResolver}) ->
  * route table assembly over `milpa/http`. Every step emits the same lifecycle events the legacy
  * host kernel's event-driven retrofit introduced (`plugin.booting`/`plugin.booted`,
- * `capability.resolved`, `kernel.booted` — see {@see \Milpa\Runtime\Events}).
+ * `capability.resolved`, `kernel.booted` — see {@see \Milpa\Events}).
  *
  * Zero Doctrine, zero legacy `Milpa\Web`: the active-plugins list is whatever `list<class-string>`
  * the caller passes via `$config['plugins']` — a config array, a file `require`d into that array,

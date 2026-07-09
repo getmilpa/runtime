@@ -11,7 +11,7 @@ use Milpa\Http\Routing\Route;
  *
  * This is the routing counterpart of core's `ToolProviderInterface`/`EventSubscriberInterface`
  * auto-registration seam: {@see \Milpa\Runtime\Kernel::boot()} checks every successfully booted
- * plugin for this interface and merges its {@see routes()} into the {@see Router} it builds —
+ * plugin for this interface and merges its {@see routes()} into the {@see \Milpa\Http\Routing\Router} it builds —
  * the same "instanceof, then auto-wire" pattern the family already uses, applied to `milpa/http`'s
  * `Route` value object instead of inventing a second routing abstraction.
  */
