@@ -17,6 +17,7 @@ use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Runtime\Kernel;
 use Milpa\Runtime\Tests\Fixtures\CommandProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\DependentPlugin;
+use Milpa\Runtime\Tests\Fixtures\OperationProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\ProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\RecordingToolRegistry;
 use Milpa\Runtime\Tests\Fixtures\RequiringPlugin;
@@ -178,5 +179,17 @@ final class KernelBootTest extends TestCase
         $kernel = Kernel::boot(['plugins' => [ProvidingPlugin::class]]);
 
         $this->assertSame([], $kernel->commands());
+    }
+
+    public function testAnOperationProvidingPluginsOperationsAreDiscoveredViaTheKernel(): void
+    {
+        $kernel = Kernel::boot(['plugins' => [OperationProvidingPlugin::class]]);
+
+        $commands = $kernel->commands();
+        $this->assertCount(1, $commands);
+        $this->assertSame('fixture:op', $commands[0]->name);
+        $this->assertTrue($commands[0]->mutating);
+        $this->assertSame(['fixture:write'], $commands[0]->scopes);
+        $this->assertSame('from operation', ($commands[0]->handler)());
     }
 }

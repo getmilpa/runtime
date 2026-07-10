@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Milpa\Runtime;
 
 use Milpa\Attributes\PluginMetadata;
+use Milpa\Command\CommandProvider;
+use Milpa\Command\Operation;
 use Milpa\Container\DIContainer;
 use Milpa\Events\CapabilityResolvedEvent;
 use Milpa\Events\InterceptionSlot;
@@ -46,11 +48,11 @@ use Psr\Log\NullLogger;
 final class Kernel
 {
     /**
-     * @param list<object>            $plugins           Every instantiated plugin, in the order given by
-     *                                                   `$config['plugins']` (includes vetoed ones).
-     * @param list<string>            $bootedPluginNames Names of plugins whose `boot()` actually ran.
-     * @param list<CommandDefinition> $commands          Commands collected from every booted
-     *                                                   `CommandProviderInterface` plugin.
+     * @param list<object>    $plugins           Every instantiated plugin, in the order given by
+     *                                           `$config['plugins']` (includes vetoed ones).
+     * @param list<string>    $bootedPluginNames Names of plugins whose `boot()` actually ran.
+     * @param list<Operation> $commands          Commands collected from every booted
+     *                                           `CommandProviderInterface` or `CommandProvider` plugin.
      */
     private function __construct(
         private readonly DIContainerInterface $container,
@@ -181,11 +183,11 @@ final class Kernel
     }
 
     /**
-     * Every command collected from a booted `CommandProviderInterface` plugin's `commands()` —
-     * the command-table counterpart of {@see router()}. A host CLI registers these as subcommands
-     * in addition to its own built-ins.
+     * Every command collected from a booted `CommandProviderInterface` plugin's `commands()`, or a
+     * `CommandProvider` plugin's `operations()` — the command-table counterpart of {@see router()}.
+     * A host CLI registers these as subcommands in addition to its own built-ins.
      *
-     * @return list<CommandDefinition>
+     * @return list<Operation>
      */
     public function commands(): array
     {
@@ -249,7 +251,7 @@ final class Kernel
      *                                                                                                                      `ContractResolver::getLoadOrder()` returns — not declared `list<>`, mirroring its own return type exactly.
      * @param array<class-string, PluginInterface>                                                          $pluginsByClass
      *
-     * @return array{0: list<string>, 1: list<\Milpa\Http\Routing\Route>, 2: list<CommandDefinition>}
+     * @return array{0: list<string>, 1: list<\Milpa\Http\Routing\Route>, 2: list<Operation>}
      */
     private static function bootPlugins(
         array $loadOrder,
@@ -292,6 +294,11 @@ final class Kernel
             if ($plugin instanceof CommandProviderInterface) {
                 foreach ($plugin->commands() as $command) {
                     $commands[] = $command;
+                }
+            }
+            if ($plugin instanceof CommandProvider) {
+                foreach ($plugin->operations() as $operation) {
+                    $commands[] = $operation;
                 }
             }
             if ($toolRegistry !== null && $plugin instanceof ToolProviderInterface) {
