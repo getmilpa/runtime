@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/getmilpa/runtime/compare/v0.2.0...v0.3.0) (2026-07-10)
+
+
+### Features
+
+* discover CommandProvider operations; CommandDefinition is now an Operation ([f867396](https://github.com/getmilpa/runtime/commit/f867396ffb10ff96c8a2dbb1e3cff905611738c1))
+
+
+### Bug Fixes
+
+* add a summary line to CommandDefinition's docblock ([8055453](https://github.com/getmilpa/runtime/commit/805545333667c1681ad4ee37d1e4bcfd864c2478))
+
+
+### Miscellaneous Chores
+
+* release 0.3.0 ([6f17b7f](https://github.com/getmilpa/runtime/commit/6f17b7fa71206ec0ceb1bfc1382e76f18eef3cae))
+
 ## [0.2.0](https://github.com/getmilpa/runtime/compare/v0.1.1...v0.2.0) (2026-07-09)
 
 
