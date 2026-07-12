@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/getmilpa/runtime/compare/v0.3.1...v0.4.0) (2026-07-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* Kernel boots in the report's loadOrder — ArchitectureBlockedException carries the ResolutionReport
+
+### Features
+
+* Kernel boots in the report's loadOrder — ArchitectureBlockedException carries the ResolutionReport ([478edd4](https://github.com/getmilpa/runtime/commit/478edd4efa036255ab03aa59e563cf7ddc6e7680))
+
 ## [0.3.1](https://github.com/getmilpa/runtime/compare/v0.3.0...v0.3.1) (2026-07-12)
 
 
