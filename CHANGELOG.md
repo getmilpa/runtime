@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/getmilpa/runtime/compare/v0.3.0...v0.3.1) (2026-07-12)
+
+
+### Features
+
+* Kernel boots through the ArchitectureResolver — learnable boot failures ([2bc5ac2](https://github.com/getmilpa/runtime/commit/2bc5ac220770e25e58ce14e9541c7766ec18f8bb))
+
 ## [0.3.0](https://github.com/getmilpa/runtime/compare/v0.2.0...v0.3.0) (2026-07-10)
 
 
