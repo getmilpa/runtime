@@ -9,7 +9,7 @@
 
 # Milpa Runtime
 
-> The **bootable Milpa kernel** — composes `milpa/core`, `milpa/container`, `milpa/events`, `milpa/http`, `milpa/plugin` and `milpa/resolver` into a running app with a config-driven plugin registry, architecture resolution before boot, and lifecycle events. Zero database, zero magic.
+> The **bootable Milpa kernel** — composes `milpa/core`, `milpa/container`, `milpa/events`, `milpa/http` and `milpa/resolver` into a running app with a config-driven plugin registry, architecture resolution before boot, and lifecycle events. Zero database, zero magic.
 
 [![CI](https://github.com/getmilpa/runtime/actions/workflows/ci.yml/badge.svg)](https://github.com/getmilpa/runtime/actions/workflows/ci.yml)
 [![Packagist](https://img.shields.io/packagist/v/milpa/runtime.svg)](https://packagist.org/packages/milpa/runtime)
@@ -102,7 +102,8 @@ final class HelloPlugin implements PluginInterface, RouteProviderInterface
 ```
 
 `Kernel::boot()` builds the container, resolves the architecture, boots the configured plugins in
-`provides` → `requires` order, and assembles the route table; `RequestHandler` matches a real
+the order the resolution's own report dictates — its `loadOrder[]`, still `provides` → `requires`,
+ties keeping the config order — and assembles the route table; `RequestHandler` matches a real
 PSR-7 request against it and dispatches to the resolved controller:
 
 ```php
@@ -123,9 +124,13 @@ $response->getStatusCode();    // -> 200
 
 No plugin can leave the boot loop undetected: `boot()` resolves the whole architecture graph
 through `milpa/resolver` (each plugin's `#[PluginMetadata]` ingested by `AttributeLoader`, the
-graph resolved by `GraphResolver`) and throws `PluginDependencyException` *before* any plugin
-boots when the graph is blocked — with a learnable message: the error code, why it failed, the
-first fix, and an Academy learn link. Pass `hostProfile` (a `HostProfile::fromArray()` shape) in
+graph resolved by `GraphResolver`) and throws `ArchitectureBlockedException` — a
+`PluginDependencyException` subclass, so every existing catch keeps working — *before* any plugin
+boots when the graph is blocked. The exception carries the full `ResolutionReport` on `->report`,
+and its message is the report's own learnable first line: the error code, why it failed, the
+first fix, and an Academy learn link. The same resolution also *orders* the boot: the report's
+`loadOrder[]` (a dependency cycle blocks pre-boot as a learnable `MILPA_DEPENDENCY_CYCLE`, never
+a bare "circular dependency" crash). Pass `hostProfile` (a `HostProfile::fromArray()` shape) in
 the config to resolve against your own architectural profile — absent, a deliberately permissive
 default keeps every graph that booted before booting still — and `evaluatedAt` (ISO-8601) as the
 clock for accepted-risk expiry. Every step along the way — `architecture.resolved` (carrying the
@@ -144,20 +149,18 @@ together and adds the boot sequence on top:
 | `milpa/container` | The DI container every plugin and controller is resolved through. |
 | `milpa/events` | The dispatcher every lifecycle event (`plugin.booting`/`plugin.booted`, `architecture.resolved`, `capability.resolved`, `kernel.booted`) fires on. |
 | `milpa/http` | Routing contracts — `Route`, `RouteResult`, `RouterInterface` — the route table is built from. |
-| `milpa/plugin` | `ContractResolver`, the `provides` → `requires` load-order algorithm the boot loop follows. |
-| `milpa/resolver` | The pre-boot architecture gate — `AttributeLoader` ingests each plugin's `#[PluginMetadata]`, `GraphResolver` resolves the whole graph into the `ResolutionReport` that `architecture.resolved` carries. |
+| `milpa/resolver` | The pre-boot architecture gate AND the boot order — `AttributeLoader` ingests each plugin's `#[PluginMetadata]`, `GraphResolver` resolves the whole graph into the `ResolutionReport` that `architecture.resolved` carries, and that report's `loadOrder[]` is the sequence the boot loop follows. |
 | **`milpa/runtime`** (this package) | **`Kernel::boot()`** itself: the wiring, the pre-boot architecture resolution call, the ordered boot loop with lifecycle events, and `Router`/`RequestHandler` — a minimal `RouterInterface` implementation and PSR-15 entry point over the assembled route table. |
 
 ## Requirements
 
 - PHP **≥ 8.3**
-- [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.5**
+- [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.5.2**
 - [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.1**
 - [`milpa/container`](https://packagist.org/packages/milpa/container) **^0.1**
 - [`milpa/events`](https://packagist.org/packages/milpa/events) **^0.2**
 - [`milpa/http`](https://packagist.org/packages/milpa/http) **^0.1**
-- [`milpa/plugin`](https://packagist.org/packages/milpa/plugin) **^0.1**
-- [`milpa/resolver`](https://packagist.org/packages/milpa/resolver) **^0.2.1**
+- [`milpa/resolver`](https://packagist.org/packages/milpa/resolver) **^0.3**
 
 ## Documentation
 

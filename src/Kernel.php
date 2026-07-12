@@ -22,7 +22,6 @@ use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Interfaces\Plugin\PluginInterface;
 use Milpa\Interfaces\Tooling\ToolProviderInterface;
 use Milpa\Interfaces\Tooling\ToolRegistryInterface;
-use Milpa\Plugin\ContractResolver;
 use Milpa\Resolver\Engine\GraphResolver;
 use Milpa\Resolver\Events\ArchitectureResolvedEvent;
 use Milpa\Resolver\Ingest\AttributeLoader;
@@ -30,6 +29,7 @@ use Milpa\Resolver\Input\ResolutionInput;
 use Milpa\Resolver\Manifest\HostProfile;
 use Milpa\Resolver\Report\ResolutionReport;
 use Milpa\Resolver\Report\ResolutionStatus;
+use Milpa\Runtime\Exceptions\ArchitectureBlockedException;
 use Milpa\Runtime\Http\RouteProviderInterface;
 use Milpa\Runtime\Support\RootResolver;
 use Milpa\ValueObjects\Capability\CapabilityRequirement;
@@ -43,8 +43,9 @@ use Psr\Log\NullLogger;
  * dispatcher ({@see \Milpa\Eventing\EventDispatcher}) -> an architecture resolution through
  * `milpa/resolver`'s {@see GraphResolver} (fails BEFORE any plugin boots, with a learnable message —
  * this replaces the retired {@see \Milpa\Services\CapabilityGraphChecker}, spec §24.7) -> plugins
- * loaded and booted in `provides`-\>`requires` order (ordering computed by `milpa/plugin`'s
- * {@see ContractResolver}) -> route table assembly over `milpa/http`. Every step emits the same
+ * loaded and booted in `provides`-\>`requires` order (the `loadOrder[]` the resolver's own
+ * {@see ResolutionReport} dictates — one topological pass, no second sort) -> route table assembly
+ * over `milpa/http`. Every step emits the same
  * lifecycle events the legacy host kernel's event-driven retrofit introduced
  * (`plugin.booting`/`plugin.booted`, `capability.resolved`, `kernel.booted` — see {@see \Milpa\Events}),
  * plus the new `architecture.resolved` carrying the resolver's full report.
@@ -107,15 +108,17 @@ final class Kernel
      *            holds. `evaluatedAt` (an ISO-8601 datetime) is passed straight through to the resolver as
      *            the clock for accepted-risk expiry; the resolver, not the runtime, validates it.
      *
-     * A blocked graph throws {@see PluginDependencyException} — the SAME exception TYPE the retired
-     * {@see \Milpa\Services\CapabilityGraphChecker} threw (BC) — but now with a learnable message
-     * (code + why + first fix + Academy link). runtime 0.4 will raise a typed exception carrying the
-     * whole {@see ResolutionReport} instead; until then the report is available to listeners on the new
-     * `architecture.resolved` event.
+     * A blocked graph throws {@see ArchitectureBlockedException} — a {@see PluginDependencyException}
+     * subclass, so every catch that worked against the retired
+     * {@see \Milpa\Services\CapabilityGraphChecker} still works (narrowing BC) — with the report's own
+     * learnable first line as the message (code + why + first fix + Academy link) and the whole
+     * {@see ResolutionReport} riding on `->report`. Boot listeners still get the report on the
+     * `architecture.resolved` event when the graph is NOT blocked.
      *
      * @throws AttributeNotFoundException                          A configured plugin class carries no `#[PluginMetadata]`.
-     * @throws PluginDependencyException                           The architecture graph is `blocked` (an unmet required
-     *                                                             contract/capability, a conflict, or an un-permitted legacy path).
+     * @throws ArchitectureBlockedException                        The architecture graph is `blocked` (an unmet required
+     *                                                             contract/capability, a conflict — a dependency cycle included —
+     *                                                             or an un-permitted legacy path); carries the full report.
      * @throws \Milpa\Resolver\Exceptions\InvalidManifestException The `hostProfile` array or the `evaluatedAt` clock is malformed,
      *                                                             or a plugin's `PluginMetadata` version is not a parseable version
      *                                                             string (all validated by the resolver, not the runtime).
@@ -149,14 +152,21 @@ final class Kernel
         [$metadataArrays, $pluginsByClass, $metadata] = self::describePlugins($plugins);
 
         // Architecture gate FIRST, before anything is booted (design mandate "falla pre-boot", spec
-        // §24.7): resolve the whole graph through milpa/resolver — a blocked graph throws a LEARNABLE
-        // PluginDependencyException (the SAME exception TYPE the retired CapabilityGraphChecker threw = BC).
+        // §24.7): resolve the whole graph through milpa/resolver — a blocked graph throws the typed
+        // ArchitectureBlockedException (a PluginDependencyException, so every existing catch = BC)
+        // carrying the full report, with the report's own learnable first line as the message.
         $report = self::resolveArchitecture($metadata, $config);
         if ($report->status === ResolutionStatus::Blocked) {
-            throw new PluginDependencyException(self::learnableMessage($report));
+            throw new ArchitectureBlockedException(
+                $report,
+                $report->firstLearnableLine()
+                    ?? 'The architecture graph is blocked; the host cannot boot until every required dependency closes.',
+            );
         }
 
-        $loadOrder = (new ContractResolver($logger))->getLoadOrder($metadataArrays);
+        // The SAME resolution that gated the graph also ordered it: follow the report's loadOrder[]
+        // (provides -> requires, ties in config order) projected onto the full plugin records.
+        $loadOrder = self::orderFromReport($report, $metadataArrays);
 
         // The report travels to boot listeners on its OWN event ('architecture.resolved') — milpa/core's
         // CapabilityResolvedEvent is frozen and could not carry it. It is dispatched BEFORE the
@@ -261,9 +271,9 @@ final class Kernel
 
     /**
      * Reflect each plugin's `#[PluginMetadata]` ONCE and return three parallel views of it: the flat
-     * arrays `ContractResolver::getLoadOrder()` consumes, the class-\>instance map the boot loop indexes,
-     * and the raw {@see PluginMetadata} records the architecture resolver ingests — so no plugin is ever
-     * reflected twice.
+     * records {@see orderFromReport()} projects the report's `loadOrder[]` onto, the class-\>instance
+     * map the boot loop indexes, and the raw {@see PluginMetadata} records the architecture resolver
+     * ingests — so no plugin is ever reflected twice.
      *
      * @param list<PluginInterface> $plugins
      *
@@ -345,22 +355,50 @@ final class Kernel
     }
 
     /**
-     * Render the first learnable error of a blocked report into the exception message: its code, human
-     * message, the concept it violated (`why`), the first concrete fix, and the English Academy link — so
-     * a blocked boot teaches the reader the way `coa:inspect architecture` does, instead of merely failing.
+     * Project the report's `loadOrder[]` — the boot sequence the SAME resolution that gated the
+     * architecture computed (`provides` -> `requires`, ties in config order) — onto the full
+     * {@see describePlugins()} records, so the boot loop and the BC `capability.resolved` payload
+     * consume the exact arrays they always consumed, now sequenced by the report.
+     *
+     * Defensive by contract, never silent: both sides derive from the SAME `#[PluginMetadata]`
+     * reflection pass, so every `loadOrder` name maps to a record — and every record appears in
+     * `loadOrder`, because the only entries the resolver ever excludes are dependency-cycle members
+     * and a cycle means `blocked`, already thrown at the gate. A mismatch in either direction —
+     * including two plugins sharing a metadata `name`, which would collapse into one sequenced entry —
+     * means the boot would silently skip or drop a plugin, so this throws instead.
+     *
+     * @param list<array{name: string, class: string, provides: array<class-string>, requires: array<class-string>, suggests: array<class-string>}> $metadataArrays
+     *
+     * @return list<array{name: string, class: string, provides: array<class-string>, requires: array<class-string>, suggests: array<class-string>}>
      */
-    private static function learnableMessage(ResolutionReport $report): string
+    private static function orderFromReport(ResolutionReport $report, array $metadataArrays): array
     {
-        $first = $report->errors[0] ?? null;
-        if ($first === null) {
-            return 'The architecture graph is blocked; the host cannot boot until every required dependency closes.';
+        $recordsByName = [];
+        foreach ($metadataArrays as $record) {
+            $recordsByName[$record['name']] = $record;
         }
 
-        $fix = $first->fixes[0] ?? '';
-        $academy = $first->links['academy'] ?? null;
-        $learn = is_array($academy) && is_string($academy['en'] ?? null) ? $academy['en'] : '';
+        $ordered = [];
+        foreach ($report->loadOrder as $entry) {
+            $name = $entry['name'] ?? null;
+            if (!is_string($name) || !isset($recordsByName[$name])) {
+                throw new \LogicException(sprintf(
+                    "The resolver's loadOrder names '%s', but no configured plugin carries that #[PluginMetadata] name — the resolver and the runtime disagreed about the inputs.",
+                    is_string($name) ? $name : get_debug_type($name),
+                ));
+            }
+            $ordered[] = $recordsByName[$name];
+        }
 
-        return sprintf('%s: %s — %s Fix: %s Learn: %s', $first->code, $first->message, $first->why, $fix, $learn);
+        if (count($ordered) !== count($metadataArrays)) {
+            throw new \LogicException(sprintf(
+                "The resolver's loadOrder sequences %d of the %d configured plugins; a dependency cycle would have blocked the gate, so a plugin was dropped without a diagnosis — the resolver and the runtime disagreed about the inputs (or two plugins share a #[PluginMetadata] name).",
+                count($ordered),
+                count($metadataArrays),
+            ));
+        }
+
+        return $ordered;
     }
 
     /**
@@ -368,8 +406,8 @@ final class Kernel
      * (stoppable), calls `boot()` unless vetoed, emits `plugin.booted`, then collects routes,
      * collects commands, and registers tools for the plugins that actually booted.
      *
-     * @param array<array{name: string, class: string, provides?: array<string>, requires?: array<string>}> $loadOrder      Same shape
-     *                                                                                                                      `ContractResolver::getLoadOrder()` returns — not declared `list<>`, mirroring its own return type exactly.
+     * @param array<array{name: string, class: string, provides?: array<string>, requires?: array<string>}> $loadOrder      The {@see describePlugins()}
+     *                                                                                                                      records in the order {@see orderFromReport()} projected from the report's `loadOrder[]`.
      * @param array<class-string, PluginInterface>                                                          $pluginsByClass
      *
      * @return array{0: list<string>, 1: list<\Milpa\Http\Routing\Route>, 2: list<Operation>}
