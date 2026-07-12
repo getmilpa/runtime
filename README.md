@@ -155,12 +155,12 @@ together and adds the boot sequence on top:
 ## Requirements
 
 - PHP **≥ 8.3**
-- [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.5.2**
+- [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.6**
 - [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.1**
 - [`milpa/container`](https://packagist.org/packages/milpa/container) **^0.1**
 - [`milpa/events`](https://packagist.org/packages/milpa/events) **^0.2**
 - [`milpa/http`](https://packagist.org/packages/milpa/http) **^0.1**
-- [`milpa/resolver`](https://packagist.org/packages/milpa/resolver) **^0.3**
+- [`milpa/resolver`](https://packagist.org/packages/milpa/resolver) **^0.4**
 
 ## Documentation
 
