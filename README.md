@@ -9,7 +9,7 @@
 
 # Milpa Runtime
 
-> The **bootable Milpa kernel** — composes `milpa/core`, `milpa/container`, `milpa/events`, `milpa/http` and `milpa/plugin` into a running app with a config-driven plugin registry, capability checks before boot, and lifecycle events. Zero database, zero magic.
+> The **bootable Milpa kernel** — composes `milpa/core`, `milpa/container`, `milpa/events`, `milpa/http`, `milpa/plugin` and `milpa/resolver` into a running app with a config-driven plugin registry, architecture resolution before boot, and lifecycle events. Zero database, zero magic.
 
 [![CI](https://github.com/getmilpa/runtime/actions/workflows/ci.yml/badge.svg)](https://github.com/getmilpa/runtime/actions/workflows/ci.yml)
 [![Packagist](https://img.shields.io/packagist/v/milpa/runtime.svg)](https://packagist.org/packages/milpa/runtime)
@@ -18,8 +18,8 @@
 [![Docs](https://img.shields.io/badge/docs-API%20reference-blue.svg)](https://getmilpa.github.io/runtime/)
 
 `milpa/runtime` is where the rest of the family stops being separate packages and becomes an
-app. `Kernel::boot()` wires a DI container, an event dispatcher, a pre-boot capability check
-over every configured plugin, an ordered boot loop that emits lifecycle events at each step,
+app. `Kernel::boot()` wires a DI container, an event dispatcher, a pre-boot architecture
+resolution over every configured plugin, an ordered boot loop that emits lifecycle events at each step,
 and a route table assembled from whatever plugins contribute one. The active-plugins list is
 whatever `list<class-string>` the caller passes in — a config array, a file `require`d into
 that array, or filesystem discovery the caller performs beforehand. **No Doctrine, no legacy
@@ -101,7 +101,7 @@ final class HelloPlugin implements PluginInterface, RouteProviderInterface
 }
 ```
 
-`Kernel::boot()` builds the container, capability-checks and boots the configured plugins in
+`Kernel::boot()` builds the container, resolves the architecture, boots the configured plugins in
 `provides` → `requires` order, and assembles the route table; `RequestHandler` matches a real
 PSR-7 request against it and dispatches to the resolved controller:
 
@@ -121,11 +121,17 @@ $response->getStatusCode();    // -> 200
 (string) $response->getBody(); // -> 'hello, milpa'
 ```
 
-No plugin can leave the boot loop undetected: `boot()` throws `PluginDependencyException`
-*before* any plugin boots if a configured plugin `requires` a capability nothing configured
-`provides`, and every step along the way — `capability.resolved`, `plugin.booting` (vetoable
-via an `InterceptionSlot`), `plugin.booted`, `kernel.booted` — fires on the wired event
-dispatcher for observability or feature-flag plugins to hook into.
+No plugin can leave the boot loop undetected: `boot()` resolves the whole architecture graph
+through `milpa/resolver` (each plugin's `#[PluginMetadata]` ingested by `AttributeLoader`, the
+graph resolved by `GraphResolver`) and throws `PluginDependencyException` *before* any plugin
+boots when the graph is blocked — with a learnable message: the error code, why it failed, the
+first fix, and an Academy learn link. Pass `hostProfile` (a `HostProfile::fromArray()` shape) in
+the config to resolve against your own architectural profile — absent, a deliberately permissive
+default keeps every graph that booted before booting still — and `evaluatedAt` (ISO-8601) as the
+clock for accepted-risk expiry. Every step along the way — `architecture.resolved` (carrying the
+resolver's full `ResolutionReport`, dispatched right before the unchanged `capability.resolved`),
+`plugin.booting` (vetoable via an `InterceptionSlot`), `plugin.booted`, `kernel.booted` — fires
+on the wired event dispatcher for observability or feature-flag plugins to hook into.
 
 ## Composes the family
 
@@ -134,21 +140,24 @@ together and adds the boot sequence on top:
 
 | Package | Owns |
 |---------|------|
-| `milpa/core` | Contracts (`PluginInterface`, `PluginMetadata`, events) and the pre-boot capability check (`CapabilityGraphChecker`). |
+| `milpa/core` | Contracts (`PluginInterface`, `PluginMetadata`, events) the whole family builds on. |
 | `milpa/container` | The DI container every plugin and controller is resolved through. |
-| `milpa/events` | The dispatcher every lifecycle event (`plugin.booting`/`plugin.booted`, `capability.resolved`, `kernel.booted`) fires on. |
+| `milpa/events` | The dispatcher every lifecycle event (`plugin.booting`/`plugin.booted`, `architecture.resolved`, `capability.resolved`, `kernel.booted`) fires on. |
 | `milpa/http` | Routing contracts — `Route`, `RouteResult`, `RouterInterface` — the route table is built from. |
 | `milpa/plugin` | `ContractResolver`, the `provides` → `requires` load-order algorithm the boot loop follows. |
-| **`milpa/runtime`** (this package) | **`Kernel::boot()`** itself: the wiring, the pre-boot capability check call, the ordered boot loop with lifecycle events, and `Router`/`RequestHandler` — a minimal `RouterInterface` implementation and PSR-15 entry point over the assembled route table. |
+| `milpa/resolver` | The pre-boot architecture gate — `AttributeLoader` ingests each plugin's `#[PluginMetadata]`, `GraphResolver` resolves the whole graph into the `ResolutionReport` that `architecture.resolved` carries. |
+| **`milpa/runtime`** (this package) | **`Kernel::boot()`** itself: the wiring, the pre-boot architecture resolution call, the ordered boot loop with lifecycle events, and `Router`/`RequestHandler` — a minimal `RouterInterface` implementation and PSR-15 entry point over the assembled route table. |
 
 ## Requirements
 
 - PHP **≥ 8.3**
 - [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.5**
+- [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.1**
 - [`milpa/container`](https://packagist.org/packages/milpa/container) **^0.1**
 - [`milpa/events`](https://packagist.org/packages/milpa/events) **^0.2**
 - [`milpa/http`](https://packagist.org/packages/milpa/http) **^0.1**
 - [`milpa/plugin`](https://packagist.org/packages/milpa/plugin) **^0.1**
+- [`milpa/resolver`](https://packagist.org/packages/milpa/resolver) **^0.2.1**
 
 ## Documentation
 
