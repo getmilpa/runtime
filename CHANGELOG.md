@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/getmilpa/runtime/compare/v0.4.0...v0.4.1) (2026-07-12)
+
+
+### Bug Fixes
+
+* receive milpa/core 0.6 and milpa/resolver 0.4 — pin bumps ([360310a](https://github.com/getmilpa/runtime/commit/360310ae56ba87efd204424381030b65863b43e0))
+
 ## [0.4.0](https://github.com/getmilpa/runtime/compare/v0.3.1...v0.4.0) (2026-07-12)
 
 
