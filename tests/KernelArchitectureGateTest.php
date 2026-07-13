@@ -15,6 +15,7 @@ use Milpa\Runtime\Kernel;
 use Milpa\Runtime\Tests\Fixtures\DependentPlugin;
 use Milpa\Runtime\Tests\Fixtures\ProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\RequiringPlugin;
+use Milpa\Runtime\Tests\Fixtures\RichRequiringPlugin;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -83,6 +84,37 @@ final class KernelArchitectureGateTest extends TestCase
         }
 
         self::assertFalse(RequiringPlugin::$booted, 'boot() must never run once the graph is blocked');
+    }
+
+    public function testARichRequiresRecordBootsThroughTheParseSeamInsteadOfTypeErroring(): void
+    {
+        RichRequiringPlugin::$booted = false;
+
+        // The T1-M2 seam (runtime 0.4.2): a canonical requires RECORD — not a bare FQCN — must route
+        // through CapabilityRequirement::parse(), never fromInterface()'s string parameter (which
+        // raw-TypeErrored). Its id names the id ProvidingPlugin's bare provides synthesizes, so
+        // the graph closes — gate AND ordering edge — and the rich requirer boots AFTER its provider.
+        $kernel = Kernel::boot(['plugins' => [RichRequiringPlugin::class, ProvidingPlugin::class]]);
+
+        self::assertSame(['ProvidingPlugin', 'RichRequiringPlugin'], $kernel->bootedPluginNames());
+        self::assertTrue(RichRequiringPlugin::$booted);
+    }
+
+    public function testARichRequiresRecordNobodyProvidesGatesLearnablyInsteadOfTypeErroring(): void
+    {
+        RichRequiringPlugin::$booted = false;
+
+        try {
+            Kernel::boot(['plugins' => [RichRequiringPlugin::class]]);
+            self::fail('a rich requires record no plugin provides must block boot — learnably, not with a TypeError');
+        } catch (PluginDependencyException $e) {
+            $message = $e->getMessage();
+            self::assertStringContainsString('MILPA_CAPABILITY_MISSING', $message);
+            self::assertStringContainsString('TestCapability', $message);
+            self::assertStringContainsString('Fix:', $message);
+        }
+
+        self::assertFalse(RichRequiringPlugin::$booted, 'boot() must never run once the graph is blocked');
     }
 
     public function testAConfigHostProfileWithAnUnmetRequiredCapabilityBlocksBoot(): void

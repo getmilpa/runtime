@@ -1,12 +1,13 @@
 <?php
 
-/*
- * This file is part of milpa/runtime.
+/**
+ * This file is part of Milpa Runtime — the bootable kernel of the Milpa PHP framework.
  *
- * (c) TeamX Agency — https://teamx.agency <hola@teamx.agency>
+ * (c) Rodrigo Vicente - TeamX Agency — https://teamx.agency <hola@teamx.agency>
  *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * @license Apache-2.0
+ *
+ * @link    https://github.com/getmilpa/runtime
  */
 
 declare(strict_types=1);

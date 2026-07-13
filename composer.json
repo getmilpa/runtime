@@ -3,6 +3,12 @@
   "description": "The bootable Milpa kernel: composes milpa/core, milpa/container, milpa/events, milpa/http and milpa/resolver into container -> dispatcher -> architecture gate -> plugin boot in the resolver's loadOrder -> route registration, with zero Doctrine and zero legacy Web coupling. The active-plugins list is config/filesystem-driven, never a database entity.",
   "type": "library",
   "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Rodrigo Vicente - TeamX Agency",
+      "homepage": "https://teamx.agency"
+    }
+  ],
   "require": {
     "php": ">=8.3",
     "milpa/core": "^0.6",
@@ -10,7 +16,7 @@
     "milpa/container": "^0.1",
     "milpa/events": "^0.2",
     "milpa/http": "^0.1.4",
-    "milpa/resolver": "^0.4",
+    "milpa/resolver": "^0.5.2",
     "psr/log": "^3",
     "psr/http-message": "^2.0",
     "psr/http-server-handler": "^1.0",

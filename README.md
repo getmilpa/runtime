@@ -130,7 +130,10 @@ boots when the graph is blocked. The exception carries the full `ResolutionRepor
 and its message is the report's own learnable first line: the error code, why it failed, the
 first fix, and an Academy learn link. The same resolution also *orders* the boot: the report's
 `loadOrder[]` (a dependency cycle blocks pre-boot as a learnable `MILPA_DEPENDENCY_CYCLE`, never
-a bare "circular dependency" crash). Pass `hostProfile` (a `HostProfile::fromArray()` shape) in
+a bare "circular dependency" crash). Capability entries ride in both shapes `#[PluginMetadata]`
+sanctions — a bare interface FQCN or a structured capability record — with every `requires`
+entry dispatched through `CapabilityRequirement::parse()`, so a rich record closes (or learnably
+blocks) the graph like any other dependency. Pass `hostProfile` (a `HostProfile::fromArray()` shape) in
 the config to resolve against your own architectural profile — absent, a deliberately permissive
 default keeps every graph that booted before booting still — and `evaluatedAt` (ISO-8601) as the
 clock for accepted-risk expiry. Every step along the way — `architecture.resolved` (carrying the
@@ -159,8 +162,8 @@ together and adds the boot sequence on top:
 - [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.1**
 - [`milpa/container`](https://packagist.org/packages/milpa/container) **^0.1**
 - [`milpa/events`](https://packagist.org/packages/milpa/events) **^0.2**
-- [`milpa/http`](https://packagist.org/packages/milpa/http) **^0.1**
-- [`milpa/resolver`](https://packagist.org/packages/milpa/resolver) **^0.4**
+- [`milpa/http`](https://packagist.org/packages/milpa/http) **^0.1.4**
+- [`milpa/resolver`](https://packagist.org/packages/milpa/resolver) **^0.5.2**
 
 ## Documentation
 
@@ -175,8 +178,8 @@ issues via [SECURITY.md](SECURITY.md), and note that this project follows a
 
 ## License
 
-[Apache-2.0](LICENSE) © TeamX Agency.
+[Apache-2.0](LICENSE) © Rodrigo Vicente - TeamX Agency.
 
 ---
 
-Milpa is designed, built, and maintained by **[TeamX Agency](https://teamx.agency/?utm_source=github&utm_medium=readme&utm_campaign=milpa&utm_content=runtime)**.
+Milpa is designed, built, and maintained by **[Rodrigo Vicente - TeamX Agency](https://teamx.agency/?utm_source=github&utm_medium=readme&utm_campaign=milpa&utm_content=runtime)**.

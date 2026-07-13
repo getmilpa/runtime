@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * This file is part of Milpa Runtime — the bootable kernel of the Milpa PHP framework.
+ *
+ * (c) Rodrigo Vicente - TeamX Agency — https://teamx.agency <hola@teamx.agency>
+ *
+ * @license Apache-2.0
+ *
+ * @link    https://github.com/getmilpa/runtime
+ */
+
 declare(strict_types=1);
 
 namespace Milpa\Runtime;
@@ -24,6 +34,7 @@ use Milpa\Interfaces\Tooling\ToolProviderInterface;
 use Milpa\Interfaces\Tooling\ToolRegistryInterface;
 use Milpa\Resolver\Engine\GraphResolver;
 use Milpa\Resolver\Events\ArchitectureResolvedEvent;
+use Milpa\Resolver\Exceptions\InvalidManifestException;
 use Milpa\Resolver\Ingest\AttributeLoader;
 use Milpa\Resolver\Input\ResolutionInput;
 use Milpa\Resolver\Manifest\HostProfile;
@@ -277,7 +288,7 @@ final class Kernel
      *
      * @param list<PluginInterface> $plugins
      *
-     * @return array{0: list<array{name: string, class: string, provides: array<class-string>, requires: array<class-string>, suggests: array<class-string>}>, 1: array<class-string, PluginInterface>, 2: list<PluginMetadata>}
+     * @return array{0: list<array{name: string, class: string, provides: array<class-string|array<string, mixed>>, requires: array<class-string|array<string, mixed>>, suggests: array<class-string|array<string, mixed>>}>, 1: array<class-string, PluginInterface>, 2: list<PluginMetadata>}
      */
     private static function describePlugins(array $plugins): array
     {
@@ -305,9 +316,13 @@ final class Kernel
      * `#[PluginMetadata]` becomes a {@see \Milpa\Resolver\Manifest\VersionManifest} via
      * {@see AttributeLoader::fromMetadata()} (its `provides` become the available providers), and each
      * plugin's `requires` becomes a {@see CapabilityRequirement} the graph must close — the versioned,
-     * legacy-aware successor to the old `provides`/`requires` identity check. The host profile comes from
-     * `$config['hostProfile']` or defaults to the permissive profile (see {@see boot()}); `evaluatedAt`
-     * rides through untouched for the resolver to validate.
+     * legacy-aware successor to the old `provides`/`requires` identity check. A `requires` entry comes
+     * in BOTH real shapes `#[PluginMetadata]` sanctions — a legacy bare FQCN string or a canonical
+     * requirement record — so each dispatches through {@see CapabilityRequirement::parse()} (the same
+     * seam {@see AttributeLoader} uses): a rich record becomes a real requirement instead of
+     * raw-TypeError-ing `fromInterface()`. The host profile comes from `$config['hostProfile']` or
+     * defaults to the permissive profile (see {@see boot()}); `evaluatedAt` rides through untouched
+     * for the resolver to validate.
      *
      * @param list<PluginMetadata> $metadata
      * @param array<string, mixed> $config
@@ -319,8 +334,8 @@ final class Kernel
         $requirements = [];
         foreach ($metadata as $meta) {
             $manifests[] = $loader->fromMetadata($meta);
-            foreach ($meta->requires as $interface) {
-                $requirements[] = CapabilityRequirement::fromInterface($interface);
+            foreach ($meta->requires as $index => $entry) {
+                $requirements[] = CapabilityRequirement::parse(self::requirementEntry($entry, $meta->name, $index));
             }
         }
 
@@ -331,6 +346,30 @@ final class Kernel
             capabilityProvisions: [],
             capabilityRequirements: $requirements,
             evaluatedAt: is_string($config['evaluatedAt'] ?? null) ? $config['evaluatedAt'] : null,
+        ));
+    }
+
+    /**
+     * Assert a `requires` entry is a parseable shape — a bare FQCN string or a structured record —
+     * mirroring {@see AttributeLoader}'s guard so both consumers of `#[PluginMetadata]` teach the
+     * same lesson. In practice {@see AttributeLoader::fromMetadata()} has already taught it for the
+     * same metadata one line up in {@see resolveArchitecture()}; this keeps the Kernel's own seam
+     * honest (and typed for {@see CapabilityRequirement::parse()}) on its own terms.
+     *
+     * @return string|array<string, mixed>
+     *
+     * @throws \Milpa\Resolver\Exceptions\InvalidManifestException When the entry is neither a string nor an array.
+     */
+    private static function requirementEntry(mixed $entry, string $plugin, int|string $index): string|array
+    {
+        if (is_string($entry) || is_array($entry)) {
+            /** @var string|array<string, mixed> $entry */
+            return $entry;
+        }
+
+        throw InvalidManifestException::malformed($plugin, sprintf(
+            '#[PluginMetadata] requires entry #%s must be an FQCN string or a record object.',
+            (string) $index,
         ));
     }
 
@@ -367,9 +406,9 @@ final class Kernel
      * including two plugins sharing a metadata `name`, which would collapse into one sequenced entry —
      * means the boot would silently skip or drop a plugin, so this throws instead.
      *
-     * @param list<array{name: string, class: string, provides: array<class-string>, requires: array<class-string>, suggests: array<class-string>}> $metadataArrays
+     * @param list<array{name: string, class: string, provides: array<class-string|array<string, mixed>>, requires: array<class-string|array<string, mixed>>, suggests: array<class-string|array<string, mixed>>}> $metadataArrays
      *
-     * @return list<array{name: string, class: string, provides: array<class-string>, requires: array<class-string>, suggests: array<class-string>}>
+     * @return list<array{name: string, class: string, provides: array<class-string|array<string, mixed>>, requires: array<class-string|array<string, mixed>>, suggests: array<class-string|array<string, mixed>>}>
      */
     private static function orderFromReport(ResolutionReport $report, array $metadataArrays): array
     {
@@ -406,9 +445,9 @@ final class Kernel
      * (stoppable), calls `boot()` unless vetoed, emits `plugin.booted`, then collects routes,
      * collects commands, and registers tools for the plugins that actually booted.
      *
-     * @param array<array{name: string, class: string, provides?: array<string>, requires?: array<string>}> $loadOrder      The {@see describePlugins()}
-     *                                                                                                                      records in the order {@see orderFromReport()} projected from the report's `loadOrder[]`.
-     * @param array<class-string, PluginInterface>                                                          $pluginsByClass
+     * @param array<array{name: string, class: string, provides?: array<string|array<string, mixed>>, requires?: array<string|array<string, mixed>>}> $loadOrder      The {@see describePlugins()}
+     *                                                                                                                                                                records in the order {@see orderFromReport()} projected from the report's `loadOrder[]`.
+     * @param array<class-string, PluginInterface>                                                                                                    $pluginsByClass
      *
      * @return array{0: list<string>, 1: list<\Milpa\Http\Routing\Route>, 2: list<Operation>}
      */
