@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/getmilpa/runtime/compare/v0.4.1...v0.4.2) (2026-07-13)
+
+
+### Bug Fixes
+
+* rich requires records parse at the Kernel seam — no raw TypeError ([fe4979f](https://github.com/getmilpa/runtime/commit/fe4979f68b92515ab947d56c18fe937d6eccdb66))
+
 ## [0.4.1](https://github.com/getmilpa/runtime/compare/v0.4.0...v0.4.1) (2026-07-12)
 
 
