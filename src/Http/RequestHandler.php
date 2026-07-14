@@ -21,13 +21,16 @@ use Milpa\Runtime\Kernel;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * The web entry point over a booted {@see Kernel}: matches the request against the kernel's
- * `milpa/http` route table and dispatches to the resolved controller, or answers 404/405 —
- * never a legacy `Milpa\Web` request/response pair, only `psr/http-message` types, per this
- * front's mandate to route+dispatch entirely on `milpa/http`.
+ * `milpa/http` route table, composes the matched route's per-route PSR-15 `middleware[]` in front
+ * of the resolved controller, and dispatches — or answers 404/405 — never a legacy `Milpa\Web`
+ * request/response pair, only `psr/http-message` types, per this front's mandate to route+dispatch
+ * entirely on `milpa/http`. Resolving those middlewares from the DI container is the concrete
+ * `MiddlewareResolverInterface` the host kernel always owed `milpa/http` (see {@see ContainerMiddlewareResolver}).
  *
  * Building the 404/405 responses needs a concrete PSR-7 message implementation, so this class
  * takes a PSR-17 {@see ResponseFactoryInterface} instead of hardcoding one (nyholm, guzzle, …) —
@@ -56,6 +59,13 @@ final class RequestHandler implements RequestHandlerInterface
         };
     }
 
+    /**
+     * Resolves the matched route's handler and, when the route declares `middleware[]`, composes
+     * those PSR-15 middlewares in front of it (via the container-backed {@see ContainerMiddlewareResolver}
+     * and the {@see MiddlewarePipeline} relay) so they run in declaration order with the handler
+     * innermost. A route with no middleware is dispatched to the resolved handler directly — the
+     * exact pre-pipeline path, byte for byte.
+     */
     private function dispatch(RouteResult $result, ServerRequestInterface $request): ResponseInterface
     {
         $route = $result->route;
@@ -67,10 +77,24 @@ final class RequestHandler implements RequestHandlerInterface
             return $this->responseFactory->createResponse(500);
         }
 
-        $resolver = new ContainerHandlerResolver($this->kernel->container());
-        $handler = $resolver->resolve($handlerReference);
+        $container = $this->kernel->container();
+        $handler = (new ContainerHandlerResolver($container))->resolve($handlerReference);
+        $request = $request->withAttribute(RouteResult::ATTRIBUTE, $result);
 
-        return $handler->handle($request->withAttribute(RouteResult::ATTRIBUTE, $result));
+        if ($route->middleware === []) {
+            return $handler->handle($request);
+        }
+
+        $middlewareResolver = new ContainerMiddlewareResolver($container);
+        $pipeline = new MiddlewarePipeline(
+            array_map(
+                static fn (string $middleware): MiddlewareInterface => $middlewareResolver->resolve($middleware),
+                $route->middleware,
+            ),
+            $handler,
+        );
+
+        return $pipeline->handle($request);
     }
 
     private function methodNotAllowed(RouteResult $result): ResponseInterface
