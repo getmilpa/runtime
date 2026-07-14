@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/getmilpa/runtime/compare/v0.4.2...v0.5.0) (2026-07-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* the middleware pipeline runs — Route middleware dispatches through the container resolver
+
+### Features
+
+* the middleware pipeline runs — Route middleware dispatches through the container resolver ([0d6e513](https://github.com/getmilpa/runtime/commit/0d6e5133c619fb6f9fdf0152a9983bc108da7fa4))
+
 ## [0.4.2](https://github.com/getmilpa/runtime/compare/v0.4.1...v0.4.2) (2026-07-13)
 
 
