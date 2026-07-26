@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/getmilpa/runtime/compare/v0.5.0...v0.5.1) (2026-07-26)
+
+
+### Bug Fixes
+
+* **deps:** accept milpa/command ^0.2 alongside ^0.1 ([6eb9d52](https://github.com/getmilpa/runtime/commit/6eb9d52e36dd229f65c016238ffb801fa1b39366))
+
 ## [0.5.0](https://github.com/getmilpa/runtime/compare/v0.4.2...v0.5.0) (2026-07-14)
 
 
