@@ -11,17 +11,21 @@ use Milpa\Events\KernelBootedEvent;
 use Milpa\Events\PluginBootedEvent;
 use Milpa\Events\PluginBootingEvent;
 use Milpa\Eventing\EventDispatcher;
+use Milpa\Exceptions\AttributeNotFoundException;
 use Milpa\Exceptions\Plugin\PluginDependencyException;
+use Milpa\Interfaces\Plugin\PluginInterface;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Runtime\Kernel;
 use Milpa\Runtime\Tests\Fixtures\CommandProvidingPlugin;
+use Milpa\Runtime\Tests\Fixtures\NotAPluginAtAll;
 use Milpa\Runtime\Tests\Fixtures\DependentPlugin;
 use Milpa\Runtime\Tests\Fixtures\OperationProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\ProvidingPlugin;
 use Milpa\Runtime\Tests\Fixtures\RecordingToolRegistry;
 use Milpa\Runtime\Tests\Fixtures\RequiringPlugin;
 use Milpa\Runtime\Tests\Fixtures\ToolProvidingPlugin;
+use Milpa\Runtime\Tests\Fixtures\UnannotatedPlugin;
 use Milpa\Runtime\Tests\Fixtures\VetoingSubscriberPlugin;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -191,5 +195,28 @@ final class KernelBootTest extends TestCase
         $this->assertTrue($commands[0]->mutating);
         $this->assertSame(['fixture:write'], $commands[0]->scopes);
         $this->assertSame('from operation', ($commands[0]->handler)());
+    }
+
+    // ---- configuring the kernel wrong ----------------------------------------
+
+    public function testAConfiguredClassThatIsNotAPluginIsNamedOutLoud(): void
+    {
+        // It carries #[PluginMetadata] and takes the container, so it looks
+        // like a plugin from the config file. It is not one, and booting it
+        // would fail later with a much worse message.
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(NotAPluginAtAll::class . ' must implement ' . PluginInterface::class);
+
+        Kernel::boot(['plugins' => [NotAPluginAtAll::class]]);
+    }
+
+    public function testAPluginWithoutMetadataIsNamedOutLoud(): void
+    {
+        // Without #[PluginMetadata] the kernel has no name to resolve load
+        // order by — there is nothing to guess.
+        $this->expectException(AttributeNotFoundException::class);
+        $this->expectExceptionMessage(UnannotatedPlugin::class . ' has no #[PluginMetadata] attribute.');
+
+        Kernel::boot(['plugins' => [UnannotatedPlugin::class]]);
     }
 }

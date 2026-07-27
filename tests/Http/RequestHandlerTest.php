@@ -7,6 +7,7 @@ namespace Milpa\Runtime\Tests\Http;
 use Milpa\Runtime\Http\RequestHandler;
 use Milpa\Runtime\Kernel;
 use Milpa\Runtime\Tests\Fixtures\Http\RoutedPlugin;
+use Milpa\Runtime\Tests\Fixtures\Http\UnboundRoutePlugin;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
@@ -58,5 +59,18 @@ final class RequestHandlerTest extends TestCase
         $response = $handler->handle(new ServerRequest('GET', '/'));
 
         $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testAMatchedRouteWithNoBoundHandlerAnswers500RatherThanFataling(): void
+    {
+        // Unreachable through a conformant router — a matched route is always
+        // bound — but Route::$handler is nullable, so the front still has to
+        // answer. A loud 500 beats a null-pointer fatal.
+        $kernel = Kernel::boot(['plugins' => [UnboundRoutePlugin::class]]);
+        $handler = new RequestHandler($kernel, new Psr17Factory());
+
+        $response = $handler->handle(new ServerRequest('GET', '/sin-handler'));
+
+        $this->assertSame(500, $response->getStatusCode());
     }
 }

@@ -55,4 +55,31 @@ final class RouterTest extends TestCase
         $this->assertSame(MatchStatus::METHOD_NOT_ALLOWED, $result->status);
         $this->assertSame([HttpMethod::GET, HttpMethod::POST], $result->allowedMethods);
     }
+
+    public function testARouteWithADifferentNumberOfSegmentsIsSkippedNotMatched(): void
+    {
+        // Two routes, one of each shape: the router has to walk past the one
+        // that cannot match rather than stopping at it.
+        $corta = new Route('/posts', HttpMethod::GET, handler: HandlerReference::action(self::class));
+        $larga = new Route('/posts/{id}', HttpMethod::GET, handler: HandlerReference::action(self::class));
+        $router = new Router($corta, $larga);
+
+        $result = $router->match(new ServerRequest('GET', '/posts/42'));
+
+        $this->assertTrue($result->isMatched());
+        $this->assertSame($larga, $result->route);
+        $this->assertSame('42', $result->parameter('id'));
+    }
+
+    public function testASegmentThatDiffersIsNoMatchEvenWhenTheShapeLinesUp(): void
+    {
+        // Same shape, different literal: without the segment comparison the
+        // router would hand /posts/1 to /users/{id}.
+        $route = new Route('/users/{id}', HttpMethod::GET, handler: HandlerReference::action(self::class));
+        $router = new Router($route);
+
+        $result = $router->match(new ServerRequest('GET', '/posts/1'));
+
+        $this->assertSame(MatchStatus::NOT_FOUND, $result->status);
+    }
 }

@@ -28,4 +28,11 @@ final class ConfigTest extends TestCase
         self::assertInstanceOf(Config::class, $cfg);
         self::assertSame('/tmp/posts.json', $cfg->get('storage.path'));
     }
+
+    public function testAllReturnsTheWholeBagAsGiven(): void
+    {
+        $config = new Config(['app' => ['name' => 'Milpa'], 'debug' => true]);
+
+        $this->assertSame(['app' => ['name' => 'Milpa'], 'debug' => true], $config->all());
+    }
 }
