@@ -155,11 +155,41 @@ together and adds the boot sequence on top:
 | `milpa/resolver` | The pre-boot architecture gate AND the boot order — `AttributeLoader` ingests each plugin's `#[PluginMetadata]`, `GraphResolver` resolves the whole graph into the `ResolutionReport` that `architecture.resolved` carries, and that report's `loadOrder[]` is the sequence the boot loop follows. |
 | **`milpa/runtime`** (this package) | **`Kernel::boot()`** itself: the wiring, the pre-boot architecture resolution call, the ordered boot loop with lifecycle events, and `Router`/`RequestHandler` — a minimal `RouterInterface` implementation and PSR-15 entry point over the assembled route table. |
 
+## Plugin boot strategies
+
+The plugin phase inside `Kernel::boot()` is a swappable strategy (`PluginBootStrategyInterface`):
+it owns the whole phase — instantiation, the architecture gate, ordering, lifecycle events, the
+boot loop — and reports back through `PluginBootResult` (`plugins`, `bootedPluginNames`, and
+`routes`/`commands`, which default to empty). Everything around the phase — container, dispatcher,
+config, root before; router and `kernel.booted` after — stays the kernel's job. Inject a strategy
+via `$config['pluginBoot']`; without one, the kernel falls back to the default.
+
+- **`InlinePluginBootStrategy`** (default) — the pre-seam kernel phase, verbatim: instantiates
+  `$config['plugins']`, gates the architecture through `milpa/resolver`, follows the report's
+  `loadOrder[]`, runs the boot loop. Byte-compatible with every kernel version before the seam
+  existed — no config change means no behavior change.
+- **`PluginsManagerBootStrategy`** — delegates the whole phase to a host-grade plugins manager
+  typed against `milpa/core`'s `Milpa\Interfaces\Plugin\PluginsManagerInterface` (e.g. milpa/plugin's
+  `PluginsManager`): registry-driven activation, resolver gate, two-layer caches, environment-gated
+  tool registration and `EventSubscriberInterface` auto-subscription all happen *inside* the
+  manager, so this strategy never re-implements them. It registers the manager under
+  `PluginsManagerInterface::class` in the container (so plugins/commands can resolve it later),
+  then calls `addPluginPath()` + `loadPlugins()` and reports whatever booted. Routes and commands
+  are intentionally left empty here: a host on this strategy assembles its route table outside the
+  kernel (attribute scanning is a host concern), so the kernel's router boots empty by design.
+
+  `milpa/plugin` itself ships only as `require-dev` on this package today — enough to satisfy the
+  test graph (`PluginsManager`, `InMemoryPluginRegistry`, `ManagerConfig`, `PluginRecord`) without
+  adding a production dependency every `milpa/runtime` consumer pays for. Whether a given release
+  promotes it to a production `require` (so hosts get `PluginsManagerBootStrategy` without also
+  requiring `milpa/plugin` themselves) is a release-ceremony decision, not an architectural one —
+  the strategy's own contract never changes either way.
+
 ## Requirements
 
 - PHP **≥ 8.3**
 - [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.6**
-- [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.1 || ^0.2**
+- [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.1**
 - [`milpa/container`](https://packagist.org/packages/milpa/container) **^0.1**
 - [`milpa/events`](https://packagist.org/packages/milpa/events) **^0.2**
 - [`milpa/http`](https://packagist.org/packages/milpa/http) **^0.1.4**
