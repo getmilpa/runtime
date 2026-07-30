@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/getmilpa/runtime/compare/v0.5.1...v0.6.0) (2026-07-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* the constraint on `milpa/command` moves from `^0.1 || ^0.2` to `^0.3`, so this package can no longer be installed alongside command 0.1 or 0.2.
+* se eliminan Milpa\Runtime\Events\CapabilityResolvedEvent, KernelBootedEvent, PluginBootedEvent y PluginBootingEvent —usa las de Milpa\Events, que son las que el kernel emite de verdad— y Milpa\Runtime\Http\Router, reemplazada por Milpa\Http\Routing\Router.
+
+### Features
+
+* la costura de estrategias de boot — el Kernel delega la fase de plugins ([2264006](https://github.com/getmilpa/runtime/commit/2264006af4ee9d28c98bef9f8af56313635ba3cf))
+* quitar los duplicados muertos de eventos y router ([fc28c97](https://github.com/getmilpa/runtime/commit/fc28c97ddeefee768e1e6298f43d59b0d70fcf27))
+* require milpa/command ^0.3 (and milpa/plugin ^0.4 in dev) ([9d9126d](https://github.com/getmilpa/runtime/commit/9d9126da9d631765d9bc9bbc84603948b844e04f))
+
 ## [0.5.1](https://github.com/getmilpa/runtime/compare/v0.5.0...v0.5.1) (2026-07-26)
 
 
