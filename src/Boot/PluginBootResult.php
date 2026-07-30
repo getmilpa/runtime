@@ -27,24 +27,24 @@ namespace Milpa\Runtime\Boot;
 final readonly class PluginBootResult
 {
     /**
-     * @param list<object>                       $plugins
-     * @param list<string>                       $bootedPluginNames
-     * @param list<\Milpa\Http\Routing\Route>    $routes
-     * @param list<\Milpa\Command\Operation>     $commands
-     * @param bool                               $emittedKernelBooted Set by the STRATEGY (never the kernel
-     *                                                                itself) to `true` when the delegated boot
-     *                                                                cycle it just ran already dispatched
-     *                                                                `kernel.booted` on `BootContext::$dispatcher` —
-     *                                                                e.g. {@see PluginsManagerBootStrategy}, whose
-     *                                                                underlying `PluginsManager::loadPlugins()`
-     *                                                                emits it itself. `Kernel::boot()` reads this
-     *                                                                flag to skip its own final dispatch, so
-     *                                                                listeners always see `kernel.booted` exactly
-     *                                                                ONCE per boot, never twice. Defaults to
-     *                                                                `false` (BC): every strategy that does not
-     *                                                                set it — {@see InlinePluginBootStrategy}
-     *                                                                included — keeps the kernel's own emission,
-     *                                                                byte-identical to the pre-flag behavior.
+     * @param list<object>                    $plugins
+     * @param list<string>                    $bootedPluginNames
+     * @param list<\Milpa\Http\Routing\Route> $routes
+     * @param list<\Milpa\Command\Operation>  $commands
+     * @param bool                            $emittedKernelBooted Set by the STRATEGY (never the kernel
+     *                                                             itself) to `true` when the delegated boot
+     *                                                             cycle it just ran already dispatched
+     *                                                             `kernel.booted` on `BootContext::$dispatcher` —
+     *                                                             e.g. {@see PluginsManagerBootStrategy}, whose
+     *                                                             underlying `PluginsManager::loadPlugins()`
+     *                                                             emits it itself. `Kernel::boot()` reads this
+     *                                                             flag to skip its own final dispatch, so
+     *                                                             listeners always see `kernel.booted` exactly
+     *                                                             ONCE per boot, never twice. Defaults to
+     *                                                             `false` (BC): every strategy that does not
+     *                                                             set it — {@see InlinePluginBootStrategy}
+     *                                                             included — keeps the kernel's own emission,
+     *                                                             byte-identical to the pre-flag behavior.
      */
     public function __construct(
         public array $plugins,

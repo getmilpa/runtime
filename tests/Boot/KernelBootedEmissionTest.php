@@ -33,7 +33,7 @@ final class KernelBootedEmissionTest extends TestCase
             ++$received;
         });
 
-        $strategy = new class implements PluginBootStrategyInterface {
+        $strategy = new class () implements PluginBootStrategyInterface {
             public function bootPlugins(BootContext $context): PluginBootResult
             {
                 // Simulate a strategy that ALREADY emitted (as PluginsManager does inside loadPlugins()).

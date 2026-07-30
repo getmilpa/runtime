@@ -26,7 +26,7 @@ final class PluginBootStrategySeamTest extends TestCase
     public function testBootHonorsInjectedStrategy(): void
     {
         $seen = null;
-        $strategy = new class($seen) implements PluginBootStrategyInterface {
+        $strategy = new class ($seen) implements PluginBootStrategyInterface {
             public function __construct(private mixed &$seen)
             {
             }
@@ -65,7 +65,7 @@ final class PluginBootStrategySeamTest extends TestCase
 
     public function testResultRoutesFeedTheRouter(): void
     {
-        $strategy = new class implements PluginBootStrategyInterface {
+        $strategy = new class () implements PluginBootStrategyInterface {
             public function bootPlugins(BootContext $context): PluginBootResult
             {
                 return new PluginBootResult(plugins: [], bootedPluginNames: []);
