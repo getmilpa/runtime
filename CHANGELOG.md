@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/getmilpa/runtime/compare/v0.6.0...v0.7.0) (2026-07-31)
+
+
+### Features
+
+* PluginsManagerBootStrategy collects the commands booted plugins declare ([952fa36](https://github.com/getmilpa/runtime/commit/952fa36f30bf79920272abf9201a5b7d5589dfd0))
+
 ## [0.6.0](https://github.com/getmilpa/runtime/compare/v0.5.1...v0.6.0) (2026-07-30)
 
 
