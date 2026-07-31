@@ -22,7 +22,7 @@ namespace Milpa\Runtime;
  * {@see Kernel::boot()} checks every successfully booted plugin for this interface and merges its
  * {@see commands()} into the {@see Kernel::commands()} list it exposes — the same
  * "instanceof, then auto-wire" pattern the family already uses for routes and tools, applied to
- * the new {@see CommandDefinition} atom. A host CLI (e.g. `milpa/skeleton`'s `coa`) registers
+ * the new {@see CommandDefinition} atom. A host CLI (e.g. `milpa/framework`'s `coa`) registers
  * every discovered command as a subcommand instead of hardcoding them, and a plugin can therefore
  * add its own `coa` command with zero host-file edits.
  */
