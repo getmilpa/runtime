@@ -26,5 +26,13 @@ namespace Milpa\Runtime\Boot;
  */
 interface PluginBootStrategyInterface
 {
+    /**
+     * Runs the kernel's whole plugin phase and reports what came out of it.
+     *
+     * The context carries everything a strategy may need — container, dispatcher, root, config and
+     * the optional tool registry — so an implementation never reaches for global state. What it
+     * returns is a value: the kernel merges the routes and commands it names, and boots nothing
+     * further of its own.
+     */
     public function bootPlugins(BootContext $context): PluginBootResult;
 }

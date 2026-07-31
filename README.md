@@ -174,9 +174,14 @@ via `$config['pluginBoot']`; without one, the kernel falls back to the default.
   tool registration and `EventSubscriberInterface` auto-subscription all happen *inside* the
   manager, so this strategy never re-implements them. It registers the manager under
   `PluginsManagerInterface::class` in the container (so plugins/commands can resolve it later),
-  then calls `addPluginPath()` + `loadPlugins()` and reports whatever booted. Routes and commands
-  are intentionally left empty here: a host on this strategy assembles its route table outside the
+  then calls `addPluginPath()` + `loadPlugins()` and reports whatever booted. **Routes** are
+  intentionally left empty here: a host on this strategy assembles its route table outside the
   kernel (attribute scanning is a host concern), so the kernel's router boots empty by design.
+  **Commands are collected**, exactly as the inline strategy collects them — a route is *discovered*
+  by scanning, but an operation is *declared* by a plugin that already booted, and there is nothing
+  left for a host to decide about it. Until 0.7.0 that sentence read "routes and commands", and the
+  exclusion of commands rode in on the conjunction: `milpa/plugin` shipped seven plugin-management
+  operations that no host on this strategy could ever see.
 
   `milpa/plugin` itself ships only as `require-dev` on this package today — enough to satisfy the
   test graph (`PluginsManager`, `InMemoryPluginRegistry`, `ManagerConfig`, `PluginRecord`) without
@@ -189,7 +194,7 @@ via `$config['pluginBoot']`; without one, the kernel falls back to the default.
 
 - PHP **≥ 8.3**
 - [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.6**
-- [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.1**
+- [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.3**
 - [`milpa/container`](https://packagist.org/packages/milpa/container) **^0.1**
 - [`milpa/events`](https://packagist.org/packages/milpa/events) **^0.2**
 - [`milpa/http`](https://packagist.org/packages/milpa/http) **^0.1.4**

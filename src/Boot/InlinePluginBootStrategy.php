@@ -48,6 +48,13 @@ use Milpa\ValueObjects\Capability\CapabilityRequirement;
  */
 final class InlinePluginBootStrategy implements PluginBootStrategyInterface
 {
+    /**
+     * Resolves the declared plugin list, validates it, and boots it in dependency order.
+     *
+     * Everything happens here: there is no manager to delegate to, which is what makes this the
+     * strategy a host gets for free. Routes, commands and operations are collected from each
+     * plugin that declares them, as it boots.
+     */
     public function bootPlugins(BootContext $context): PluginBootResult
     {
         $config = $context->config;

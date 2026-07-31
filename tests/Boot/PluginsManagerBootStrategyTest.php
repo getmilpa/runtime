@@ -56,17 +56,29 @@ final class PluginsManagerBootStrategyTest extends TestCase
             namespace Milpa\\Plugins\\Stub{$suffix}Plugin;
 
             use Milpa\\Attributes\\PluginMetadata;
+            use Milpa\\Command\\CommandProvider;
+            use Milpa\\Command\\Operation;
             use Milpa\\Interfaces\\Plugin\\PluginInterface;
             use Milpa\\Plugin\\PluginBase;
 
             #[PluginMetadata(version: '1.0.0', author: 'Test', site: 'https://example.com', name: 'Stub{$suffix}Plugin', type: 'Service')]
-            class Stub{$suffix}Plugin extends PluginBase implements PluginInterface
+            class Stub{$suffix}Plugin extends PluginBase implements CommandProvider, PluginInterface
             {
                 public function boot(): void {}
                 public function install(): void {}
                 public function uninstall(): void {}
                 public function enable(): void {}
                 public function disable(): void {}
+
+                /** @return list<Operation> */
+                public function operations(): array
+                {
+                    return [new Operation(
+                        name: 'stub.ping',
+                        description: 'Un átomo declarado por un plugin, para medir si llega.',
+                        handler: static fn (): string => 'pong',
+                    )];
+                }
             }
             PHP);
 
@@ -131,5 +143,52 @@ final class PluginsManagerBootStrategyTest extends TestCase
         self::assertSame([], $result->routes, 'las rutas del host se ensamblan fuera del kernel (D4)');
         self::assertTrue($container->has(PluginsManagerInterface::class));
         self::assertSame($manager, $container->get(PluginsManagerInterface::class));
+    }
+
+    /**
+     * El corte de P14.1a: un plugin que declara operaciones las ve llegar a la mesa de comandos
+     * del kernel también por ESTA estrategia.
+     *
+     * Antes no llegaban, y el docblock de la clase lo enunciaba como decisión —"routes and
+     * commands are intentionally NOT collected"— justificando sólo las rutas. El precio fue
+     * medible: las siete operaciones de administración de plugins que `milpa/plugin` publica no
+     * eran alcanzables desde ningún host montado sobre un `PluginsManager`.
+     *
+     * La prueba mira `$result->commands` y no una superficie: qué hace un projector con el átomo
+     * es asunto del projector (ADR-0035). Lo que aquí se mide es que el átomo EXISTE.
+     */
+    public function testCollectsOperationsFromACommandProviderPlugin(): void
+    {
+        $container = new DIContainer();
+        $container->registerService(LoggerInterface::class, new NullLogger());
+
+        $registry = new InMemoryPluginRegistry();
+        $registry->register(new PluginRecord(
+            name: $this->pluginShortName,
+            version: '1.0.0',
+            author: 'Test',
+            site: 'https://example.com',
+            type: 'Service',
+            installed: true,
+            enabled: true,
+        ));
+        $manager = new PluginsManager($container, $registry, new ManagerConfig(
+            cacheDir: $this->tmpDir . '/cache',
+            hostManifestPath: null,
+            devMode: true,
+            environment: 'CLI',
+        ));
+
+        $strategy = new PluginsManagerBootStrategy($manager, $this->tmpDir . '/plugins');
+        $result = $strategy->bootPlugins(new BootContext(
+            container: $container,
+            dispatcher: new EventDispatcher(new NullLogger()),
+            root: $this->tmpDir,
+            config: [],
+            toolRegistry: null,
+        ));
+
+        self::assertCount(1, $result->commands);
+        self::assertSame('stub.ping', $result->commands[0]->name);
     }
 }
