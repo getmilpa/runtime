@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/getmilpa/runtime/compare/v0.7.0...v0.7.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* require milpa/plugin ^0.6 ([347b255](https://github.com/getmilpa/runtime/commit/347b2557a38bcc81abb81d6ce198a64f1873f09e))
+
 ## [0.7.0](https://github.com/getmilpa/runtime/compare/v0.6.0...v0.7.0) (2026-07-31)
 
 
