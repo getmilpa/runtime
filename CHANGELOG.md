@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/getmilpa/runtime/compare/v0.7.2...v0.7.3) (2026-08-01)
+
+
+### Bug Fixes
+
+* **deps:** el pin de milpa/command deja de ser una jaula de un minor ([228e710](https://github.com/getmilpa/runtime/commit/228e71087bf36bbf5fcf041b89887c26ba715613))
+
 ## [0.7.2](https://github.com/getmilpa/runtime/compare/v0.7.1...v0.7.2) (2026-08-01)
 
 
