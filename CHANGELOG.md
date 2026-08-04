@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.5](https://github.com/getmilpa/runtime/compare/v0.7.4...v0.7.5) (2026-08-04)
+
+
+### Bug Fixes
+
+* **deps:** admite milpa/resolver ^0.6 ([5b774b6](https://github.com/getmilpa/runtime/commit/5b774b660939b1aab868056e3fe94557de9d406f))
+
 ## [0.7.4](https://github.com/getmilpa/runtime/compare/v0.7.3...v0.7.4) (2026-08-02)
 
 
