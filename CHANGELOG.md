@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.6](https://github.com/getmilpa/runtime/compare/v0.7.5...v0.7.6) (2026-08-05)
+
+
+### Bug Fixes
+
+* **deps:** el rango de milpa/command admite 0.6 ([bee1881](https://github.com/getmilpa/runtime/commit/bee1881d3e42ae500128ff9002bff8e1f241f97c))
+
 ## [0.7.5](https://github.com/getmilpa/runtime/compare/v0.7.4...v0.7.5) (2026-08-04)
 
 
