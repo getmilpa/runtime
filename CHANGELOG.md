@@ -1,5 +1,12 @@
 # Changelog
 
+
+## [0.7.8](https://github.com/getmilpa/runtime/releases/tag/v0.7.8) (2026-08-12)
+
+Accepts `milpa/command ^0.8`, which ships the descent field — an argument that lowers an operation's ceiling, with its reason carried in the declaration.
+
+Widening only: no behaviour changes here. Capping the atom at `^0.7` is what stopped anything downstream from resolving a version that uses it; greenhouse `evidence/0151` measured eight packages holding that cap.
+
 ## [0.7.7](https://github.com/getmilpa/runtime/compare/v0.7.6...v0.7.7) (2026-08-09)
 
 
