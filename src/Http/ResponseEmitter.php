@@ -27,9 +27,15 @@ use Psr\Http\Message\ResponseInterface;
  * response takes the same buffered `echo (string) $body` path as before, so adopting the emitter is behavior
  * -preserving; streaming is the new capability a `CallbackStream` body opts into.
  *
- * The status and header sinks are injectable so the emission is testable without a live SAPI (the defaults
- * are PHP's own `http_response_code()` and `header()`, matching the front controller this replaces —
- * multiple values of one header are appended, not replaced).
+ * The status and header sinks — and, for streaming, the buffer flusher — are injectable so emission is
+ * testable without a live SAPI (the defaults are PHP's own `http_response_code()` and `header()`, matching
+ * the front controller this replaces — multiple values of one header are appended, not replaced).
+ *
+ * Streaming a {@see CallbackStream} first defeats PHP's output buffering: without ending any active output
+ * buffer, `flush()` inside the callback cannot push bytes to the client, so the "stream" would arrive whole
+ * at connection close — no streaming at all. Ending output buffers is a SAPI-emission concern, so it lives
+ * here (not in every streaming handler), and it is injectable so a test can capture the streamed bytes in
+ * its own buffer instead of having them flushed away.
  */
 final class ResponseEmitter
 {
@@ -39,15 +45,24 @@ final class ResponseEmitter
     /** @var callable(string): void */
     private $headerSink;
 
+    /** @var callable(): void */
+    private $bufferFlusher;
+
     /**
-     * @param (callable(int): void)|null    $statusSink Receives the status code (default: `http_response_code`).
-     * @param (callable(string): void)|null $headerSink Receives each `"Name: value"` line (default: `header(..., false)`).
+     * @param (callable(int): void)|null    $statusSink    Receives the status code (default: `http_response_code`).
+     * @param (callable(string): void)|null $headerSink    Receives each `"Name: value"` line (default: `header(..., false)`).
+     * @param (callable(): void)|null       $bufferFlusher Ends active output buffers before streaming (default: `ob_end_flush` down to level 0); a test passes a no-op to keep its capture buffer.
      */
-    public function __construct(?callable $statusSink = null, ?callable $headerSink = null)
+    public function __construct(?callable $statusSink = null, ?callable $headerSink = null, ?callable $bufferFlusher = null)
     {
         $this->statusSink = $statusSink ?? static fn (int $code): mixed => http_response_code($code);
         $this->headerSink = $headerSink ?? static function (string $line): void {
             header($line, false);
+        };
+        $this->bufferFlusher = $bufferFlusher ?? static function (): void {
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
         };
     }
 
@@ -64,6 +79,8 @@ final class ResponseEmitter
 
         $body = $response->getBody();
         if ($body instanceof CallbackStream) {
+            // Defeat output buffering so the callback's own flush() reaches the client incrementally.
+            ($this->bufferFlusher)();
             ($body->callback())();
 
             return;

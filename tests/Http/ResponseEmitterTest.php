@@ -56,12 +56,17 @@ final class ResponseEmitterTest extends TestCase
     {
         $status = null;
         $headers = [];
+        $flushed = false;
         $emitter = new ResponseEmitter(
             function (int $code) use (&$status): void {
                 $status = $code;
             },
             function (string $line) use (&$headers): void {
                 $headers[] = $line;
+            },
+            // No-op flusher: the real one would end this test's capture buffer before we could read it.
+            function () use (&$flushed): void {
+                $flushed = true;
             },
         );
 
@@ -79,6 +84,39 @@ final class ResponseEmitterTest extends TestCase
         self::assertSame(200, $status);
         self::assertContains('Content-Type: text/event-stream', $headers);
         self::assertSame("event: tick\ndata: 1\n\n", $output);
+        self::assertTrue($flushed, 'output buffering is defeated before streaming');
+    }
+
+    public function testABufferedBodyDoesNotDefeatOutputBuffering(): void
+    {
+        $flushed = false;
+        $emitter = new ResponseEmitter(
+            static fn (int $code): int => $code,
+            static fn (string $line): null => null,
+            function () use (&$flushed): void {
+                $flushed = true;
+            },
+        );
+
+        ob_start();
+        $emitter->emit(new Response(200, [], 'plain'));
+        ob_end_clean();
+
+        self::assertFalse($flushed, 'a normal response must not touch output buffers');
+    }
+
+    public function testItUsesPhpsOwnStatusSinkByDefault(): void
+    {
+        // Exercises the production default status sink (http_response_code, a no-op under CLI) without a
+        // live SAPI. The header and buffer-flush defaults are SAPI-bound and are proved on cattle over a
+        // real socket, not here.
+        $emitter = new ResponseEmitter(null, static fn (string $line): null => null, static fn (): null => null);
+
+        ob_start();
+        $emitter->emit(new Response(204, [], ''));
+        $output = (string) ob_get_clean();
+
+        self::assertSame('', $output);
     }
 
     public function testMultipleValuesOfOneHeaderAreEachEmitted(): void
