@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.9.0](https://github.com/getmilpa/runtime/compare/v0.8.2...v0.9.0) (2026-09-03)
+
+
+### Features
+
+* a streaming response primitive — CallbackStream + ResponseEmitter (evidence/0472) ([#30](https://github.com/getmilpa/runtime/issues/30)) ([dceec10](https://github.com/getmilpa/runtime/commit/dceec101d325cdc53d4b1f4f31c3b12fcf988649))
+
 ## [0.7.8](https://github.com/getmilpa/runtime/releases/tag/v0.7.8) (2026-08-12)
 
 Accepts `milpa/command ^0.8`, which ships the descent field — an argument that lowers an operation's ceiling, with its reason carried in the declaration.
