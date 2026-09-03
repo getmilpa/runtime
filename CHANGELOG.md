@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.9.1](https://github.com/getmilpa/runtime/compare/v0.9.0...v0.9.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* the emitter defeats output buffering so a CallbackStream actually streams (evidence/0473) ([#32](https://github.com/getmilpa/runtime/issues/32)) ([7adf987](https://github.com/getmilpa/runtime/commit/7adf9871fbcd1d108c0da836898432b340af5ae5))
+
 ## [0.9.0](https://github.com/getmilpa/runtime/compare/v0.8.2...v0.9.0) (2026-09-03)
 
 
