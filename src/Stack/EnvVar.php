@@ -20,6 +20,11 @@ namespace Milpa\Runtime\Stack;
  * A plugin can say the value outright (`value`), point at the app config key that holds it
  * (`configKey` — the app owns it, the projection reads it), or mark it secret: a secret is never
  * shown and never inlined; it is projected as `${NAME}` so the operator supplies it out of band.
+ *
+ * When both a literal and a config key are given, the app's config wins and the literal is the
+ * fallback. A secret NEVER carries a literal value: a declaration that says «secret» and hands the
+ * value over in code is lying, and the contract refuses it here rather than trusting every reader
+ * to mask it downstream.
  */
 final readonly class EnvVar
 {
@@ -39,6 +44,12 @@ final readonly class EnvVar
     ) {
         if (preg_match(self::NAME_PATTERN, $name) !== 1) {
             throw new \InvalidArgumentException(\sprintf('Env var name «%s» must match %s.', $name, self::NAME_PATTERN));
+        }
+        if ($secret && $value !== null) {
+            throw new \InvalidArgumentException(\sprintf(
+                'Env var «%s» is declared secret but carries a literal value: a secret is supplied by the operator, never by the plugin.',
+                $name,
+            ));
         }
     }
 }

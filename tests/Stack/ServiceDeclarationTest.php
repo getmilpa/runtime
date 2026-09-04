@@ -84,6 +84,7 @@ final class ServiceDeclarationTest extends TestCase
         yield 'host port out of range' => [static fn () => new PortMapping(80, 65536), 'out of range'];
         yield 'bad protocol' => [static fn () => new PortMapping(80, 80, 'sctp'), 'tcp or udp'];
         yield 'env name lowercase' => [static fn () => new EnvVar('server_name'), 'must match'];
+        yield 'a secret with a literal value is a lying declaration' => [static fn () => new EnvVar('JWT_KEY', value: 'in-code', secret: true), 'declared secret but carries a literal value'];
         yield 'env name with dash' => [static fn () => new EnvVar('SERVER-NAME'), 'must match'];
     }
 }
