@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.10.0](https://github.com/getmilpa/runtime/compare/v0.9.1...v0.10.0) (2026-09-04)
+
+
+### Features
+
+* a plugin declares the backing services it needs — StackProviderInterface, ServiceDeclaration, PortMapping, EnvVar (greenhouse decisions/0201) ([#34](https://github.com/getmilpa/runtime/issues/34)) ([73a69e7](https://github.com/getmilpa/runtime/commit/73a69e7a9f2e33d1894972791dc1be986e9b3d04))
+
 ## [0.9.1](https://github.com/getmilpa/runtime/compare/v0.9.0...v0.9.1) (2026-09-03)
 
 
