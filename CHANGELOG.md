@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.11.0](https://github.com/getmilpa/runtime/compare/v0.10.1...v0.11.0) (2026-09-07)
+
+
+### Features
+
+* an unhandled throwable becomes a rendered response, and its message stays here ([#39](https://github.com/getmilpa/runtime/issues/39)) ([15afed7](https://github.com/getmilpa/runtime/commit/15afed798a4d8f0e02801211989c953a0a263ad6))
+
 ## [0.10.1](https://github.com/getmilpa/runtime/compare/v0.10.0...v0.10.1) (2026-09-04)
 
 
