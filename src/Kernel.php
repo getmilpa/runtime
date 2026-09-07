@@ -21,6 +21,8 @@ use Milpa\Eventing\EventDispatcher;
 use Milpa\Exceptions\AttributeNotFoundException;
 use Milpa\Exceptions\Plugin\PluginDependencyException;
 use Milpa\Http\Routing\Router;
+use Milpa\Http\Routing\UrlGenerator;
+use Milpa\Http\Routing\UrlGeneratorInterface;
 use Milpa\Interfaces\Di\DIContainerInterface;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Interfaces\Tooling\ToolRegistryInterface;
@@ -149,6 +151,12 @@ final class Kernel
         $result = $strategy->bootPlugins(new BootContext($container, $dispatcher, $root, $config, $toolRegistry));
 
         $router = new Router(...$result->routes);
+
+        // Reverse routing is the KERNEL'S to wire, not the app's: the route table is assembled here,
+        // from every plugin, and a generator built anywhere else would be reading a copy. Registered
+        // under the interface so a consumer type-hints the contract and never this class — the
+        // framework's own answer to «where does route() come from» (greenhouse decisions/0215, F4).
+        $container->registerService(UrlGeneratorInterface::class, new UrlGenerator($router));
 
         // Skip when the strategy already emitted it on this SAME dispatcher (see
         // PluginBootResult::$emittedKernelBooted) — otherwise listeners would see it TWICE.
