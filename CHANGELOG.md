@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.12.0](https://github.com/getmilpa/runtime/compare/v0.11.0...v0.12.0) (2026-09-07)
+
+
+### Features
+
+* the kernel wires reverse routing, so an app can name its own URLs ([#41](https://github.com/getmilpa/runtime/issues/41)) ([4525b91](https://github.com/getmilpa/runtime/commit/4525b9141b0986fb6389b87f02ca2f578c30c1c6))
+
 ## [0.11.0](https://github.com/getmilpa/runtime/compare/v0.10.1...v0.11.0) (2026-09-07)
 
 
