@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.14.0](https://github.com/getmilpa/runtime/compare/v0.13.0...v0.14.0) (2026-09-08)
+
+
+### Features
+
+* the manifest names this package's event holder so a host reads it without booting ([#45](https://github.com/getmilpa/runtime/issues/45)) ([5388e4c](https://github.com/getmilpa/runtime/commit/5388e4c7ccf2d9cd7f24d8c3e02f969e302d5060))
+
 ## [0.13.0](https://github.com/getmilpa/runtime/compare/v0.12.0...v0.13.0) (2026-09-08)
 
 
