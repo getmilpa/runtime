@@ -24,6 +24,7 @@ use Milpa\Http\Routing\Router;
 use Milpa\Http\Routing\UrlGenerator;
 use Milpa\Http\Routing\UrlGeneratorInterface;
 use Milpa\Interfaces\Di\DIContainerInterface;
+use Milpa\Interfaces\Event\DeclaredEvents;
 use Milpa\Interfaces\Event\MilpaEventDispatcherInterface;
 use Milpa\Interfaces\Tooling\ToolRegistryInterface;
 use Milpa\Resolver\Engine\GraphResolver;
@@ -31,6 +32,7 @@ use Milpa\Resolver\Manifest\HostProfile;
 use Milpa\Resolver\Report\ResolutionReport;
 use Milpa\Runtime\Boot\BootContext;
 use Milpa\Runtime\Boot\InlinePluginBootStrategy;
+use Milpa\Runtime\Event\RuntimeEvents;
 use Milpa\Runtime\Exceptions\ArchitectureBlockedException;
 use Milpa\Runtime\Support\RootResolver;
 use Psr\Log\LoggerInterface;
@@ -130,6 +132,13 @@ final class Kernel
         $logger = $config['logger'] ?? new NullLogger();
         $container = $config['container'] ?? new DIContainer();
         $dispatcher = $config['dispatcher'] ?? new EventDispatcher($logger);
+        // The dispatcher is the one place every dispatch passes through, so it is told HERE — the moment
+        // this package holds it, before any dispatch — which events this package dispatches. A dispatcher
+        // that takes no declarations is told nothing and every dispatch below works the same; declaring
+        // is not enforced, it is counted (greenhouse decisions/0228).
+        if ($dispatcher instanceof DeclaredEvents) {
+            $dispatcher->declare(...RuntimeEvents::declarations());
+        }
         $container->registerService(MilpaEventDispatcherInterface::class, $dispatcher);
 
         $root = (new RootResolver($config['root'] ?? null))->resolve();
@@ -161,7 +170,7 @@ final class Kernel
         // Skip when the strategy already emitted it on this SAME dispatcher (see
         // PluginBootResult::$emittedKernelBooted) — otherwise listeners would see it TWICE.
         if (!$result->emittedKernelBooted) {
-            $dispatcher->dispatch('kernel.booted', ['event' => new KernelBootedEvent($result->bootedPluginNames)]);
+            $dispatcher->dispatch(RuntimeEvents::KERNEL_BOOTED, [RuntimeEvents::SUBJECT_KEY => new KernelBootedEvent($result->bootedPluginNames)]);
         }
 
         return new self($container, $dispatcher, $router, $result->plugins, $result->bootedPluginNames, $root, $toolRegistry, $result->commands);

@@ -141,6 +141,18 @@ resolver's full `ResolutionReport`, dispatched right before the unchanged `capab
 `plugin.booting` (vetoable via an `InterceptionSlot`), `plugin.booted`, `kernel.booted` — fires
 on the wired event dispatcher for observability or feature-flag plugins to hook into.
 
+Every one of those names is **declared** to the dispatcher before the first dispatch. `Kernel::boot()`
+hands `RuntimeEvents::declarations()` — one `EventDeclaration` per event, built from the SAME constants
+the `dispatch()` sites use (`RuntimeEvents::PLUGIN_BOOTING`, …), naming the dispatching class, the moment
+it fires, the payload key and class of its subject, and whether an `InterceptionSlot` rides along — to
+any dispatcher implementing `milpa/core`'s `DeclaredEvents` (`milpa/events` ≥ 0.4 does). A dispatcher
+that does not is told nothing and everything dispatches exactly the same: declaring is not enforced, it
+is counted, so the house can ask the dispatcher «what events exist, and which were dispatched undeclared»
+instead of grepping source (greenhouse decisions/0228). The falsifier is
+`tests/TheKernelDeclaresEveryEventItDispatchesTest.php`: a spy dispatcher under the real boot, the declared
+set held against the dispatched set, against the payload each dispatch really carried, and against the
+exact list of five.
+
 ## Composes the family
 
 `milpa/runtime` doesn't reimplement anything the family already ships — it wires the pieces
@@ -193,7 +205,7 @@ via `$config['pluginBoot']`; without one, the kernel falls back to the default.
 ## Requirements
 
 - PHP **≥ 8.3**
-- [`milpa/core`](https://packagist.org/packages/milpa/core) **^0.6**
+- [`milpa/core`](https://packagist.org/packages/milpa/core) **≥ 0.11**
 - [`milpa/command`](https://packagist.org/packages/milpa/command) **^0.3**
 - [`milpa/container`](https://packagist.org/packages/milpa/container) **^0.1**
 - [`milpa/events`](https://packagist.org/packages/milpa/events) **^0.2**
