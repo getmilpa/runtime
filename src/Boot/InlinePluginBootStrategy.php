@@ -36,6 +36,7 @@ use Milpa\Resolver\Manifest\HostProfile;
 use Milpa\Resolver\Report\ResolutionReport;
 use Milpa\Resolver\Report\ResolutionStatus;
 use Milpa\Runtime\CommandProviderInterface;
+use Milpa\Runtime\Event\RuntimeEvents;
 use Milpa\Runtime\Exceptions\ArchitectureBlockedException;
 use Milpa\Runtime\Http\RouteProviderInterface;
 use Milpa\ValueObjects\Capability\CapabilityRequirement;
@@ -87,8 +88,8 @@ final class InlinePluginBootStrategy implements PluginBootStrategyInterface
         // The report travels to boot listeners on its OWN event ('architecture.resolved') — milpa/core's
         // CapabilityResolvedEvent is frozen and could not carry it. It is dispatched BEFORE the
         // byte-identical, BC 'capability.resolved' so the old listeners see exactly what they saw before.
-        $context->dispatcher->dispatch('architecture.resolved', ['event' => new ArchitectureResolvedEvent($report)]);
-        $context->dispatcher->dispatch('capability.resolved', ['event' => new CapabilityResolvedEvent($loadOrder)]);
+        $context->dispatcher->dispatch(RuntimeEvents::ARCHITECTURE_RESOLVED, [RuntimeEvents::SUBJECT_KEY => new ArchitectureResolvedEvent($report)]);
+        $context->dispatcher->dispatch(RuntimeEvents::CAPABILITY_RESOLVED, [RuntimeEvents::SUBJECT_KEY => new CapabilityResolvedEvent($loadOrder)]);
 
         [$bootedNames, $routes, $commands] = self::runBootLoop($loadOrder, $pluginsByClass, $context->dispatcher, $context->toolRegistry);
 
@@ -317,8 +318,8 @@ final class InlinePluginBootStrategy implements PluginBootStrategyInterface
 
             $slot = new InterceptionSlot();
             $dispatcher->dispatch(
-                'plugin.booting',
-                ['event' => new PluginBootingEvent($name, $metadataPayload), 'slot' => $slot],
+                RuntimeEvents::PLUGIN_BOOTING,
+                [RuntimeEvents::SUBJECT_KEY => new PluginBootingEvent($name, $metadataPayload), RuntimeEvents::SLOT_KEY => $slot],
             );
             if ($slot->isStopped()) {
                 continue;
@@ -326,7 +327,7 @@ final class InlinePluginBootStrategy implements PluginBootStrategyInterface
 
             $plugin->boot();
             $bootedNames[] = $name;
-            $dispatcher->dispatch('plugin.booted', ['event' => new PluginBootedEvent($name, $metadataPayload)]);
+            $dispatcher->dispatch(RuntimeEvents::PLUGIN_BOOTED, [RuntimeEvents::SUBJECT_KEY => new PluginBootedEvent($name, $metadataPayload)]);
 
             if ($plugin instanceof RouteProviderInterface) {
                 foreach ($plugin->routes() as $route) {
