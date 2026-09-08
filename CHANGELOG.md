@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.13.0](https://github.com/getmilpa/runtime/compare/v0.12.0...v0.13.0) (2026-09-08)
+
+
+### Features
+
+* the kernel declares every event it dispatches to the dispatcher ([#43](https://github.com/getmilpa/runtime/issues/43)) ([22524b1](https://github.com/getmilpa/runtime/commit/22524b15fd3ca70417196c92bb9a7811571c3640))
+
 ## [0.12.0](https://github.com/getmilpa/runtime/compare/v0.11.0...v0.12.0) (2026-09-07)
 
 
