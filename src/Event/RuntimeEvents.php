@@ -20,6 +20,7 @@ use Milpa\Events\KernelBootedEvent;
 use Milpa\Events\PluginBootedEvent;
 use Milpa\Events\PluginBootingEvent;
 use Milpa\Interfaces\Event\DeclaredEvents;
+use Milpa\Interfaces\Event\DeclaresEvents;
 use Milpa\Interfaces\Event\EventDeclaration;
 use Milpa\Resolver\Events\ArchitectureResolvedEvent;
 use Milpa\Runtime\Boot\InlinePluginBootStrategy;
@@ -35,8 +36,13 @@ use Milpa\Runtime\Kernel;
  * other dispatcher is told nothing and every dispatch keeps working, because the authority on «what
  * events exist» is the emitter and the one place every dispatch passes through is the dispatcher
  * (greenhouse decisions/0228).
+ *
+ * A declaration made at construction only reaches a process that constructs the emitter. Implementing
+ * {@see DeclaresEvents} and naming this class under `extra.milpa.events` in the package manifest lets a
+ * host read the same list from what Composer really installed and declare it on behalf of an emitter
+ * this process will never build.
  */
-final class RuntimeEvents
+final class RuntimeEvents implements DeclaresEvents
 {
     /** The resolver accepted the whole plugin graph; carries its full report. Fires before any plugin boots. */
     public const ARCHITECTURE_RESOLVED = 'architecture.resolved';
