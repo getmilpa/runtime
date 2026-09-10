@@ -141,6 +141,15 @@ final class Kernel
         }
         $container->registerService(MilpaEventDispatcherInterface::class, $dispatcher);
 
+        // THE LOGGER GOES INTO THE CONTAINER. It was accepted as a config key and kept as a local, so
+        // an app that passed one still could not reach it — and the host that most needs it is the one
+        // building `ExceptionMiddleware`, whose 500 page promises «the detail is in this app's log».
+        // A framework that takes a logger and hides it is why that promise was empty on every fresh app
+        // (greenhouse decisions/0286). Registered under the PSR interface so a plugin type-hints the
+        // contract, never a class of ours; absent one from the host it is a NullLogger, which is silent
+        // BY REQUEST rather than by omission.
+        $container->registerService(LoggerInterface::class, $logger);
+
         $root = (new RootResolver($config['root'] ?? null))->resolve();
 
         // App config bag: plugins read their own configuration here in boot() — the seam that
