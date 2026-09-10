@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.15.0](https://github.com/getmilpa/runtime/compare/v0.14.0...v0.15.0) (2026-09-10)
+
+
+### Features
+
+* **stack:** the reader of declared services lives next to the contract, because it has two consumers now ([#47](https://github.com/getmilpa/runtime/issues/47)) ([401ceba](https://github.com/getmilpa/runtime/commit/401ceba627188b5af83cde749cd0a78f5389601a))
+
 ## [0.14.0](https://github.com/getmilpa/runtime/compare/v0.13.0...v0.14.0) (2026-09-08)
 
 
