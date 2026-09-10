@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.16.0](https://github.com/getmilpa/runtime/compare/v0.15.0...v0.16.0) (2026-09-10)
+
+
+### Features
+
+* the log a 500 page names can exist — the kernel hands back its logger, and there is a destination ([#49](https://github.com/getmilpa/runtime/issues/49)) ([0e72db9](https://github.com/getmilpa/runtime/commit/0e72db9bdc7be29879db493fb4b2193bdf1a1e93))
+
 ## [0.15.0](https://github.com/getmilpa/runtime/compare/v0.14.0...v0.15.0) (2026-09-10)
 
 
