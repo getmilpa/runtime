@@ -39,7 +39,14 @@ final class StackProviderTest extends TestCase
         self::assertSame('hub', $services[0]->name);
         self::assertSame('example/hub:1', $services[0]->image);
         self::assertSame(3000, $services[0]->probePort());
-        self::assertSame('HUB_JWT_KEY', $services[0]->env[1]->name);
-        self::assertTrue($services[0]->env[1]->secret);
+        // BY NAME, NOT BY INDEX. This pinned `env[1]`, and the position is not the property — widening
+        // the shared fixture by one variable broke it while everything it meant stayed true
+        // (greenhouse decisions/0282).
+        $byName = [];
+        foreach ($services[0]->env as $var) {
+            $byName[$var->name] = $var;
+        }
+        self::assertArrayHasKey('HUB_JWT_KEY', $byName);
+        self::assertTrue($byName['HUB_JWT_KEY']->secret);
     }
 }
