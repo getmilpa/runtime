@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.17.0](https://github.com/getmilpa/runtime/compare/v0.16.0...v0.17.0) (2026-09-28)
+
+
+### Features
+
+* **stack:** a declaration names what its service answers, and a squatter reads as occupied ([#51](https://github.com/getmilpa/runtime/issues/51)) ([29f3af5](https://github.com/getmilpa/runtime/commit/29f3af59bec6c087f4ac447f53e09fac8a5baa75))
+
 ## [0.16.0](https://github.com/getmilpa/runtime/compare/v0.15.0...v0.16.0) (2026-09-10)
 
 
