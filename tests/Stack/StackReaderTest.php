@@ -19,6 +19,7 @@ use Milpa\Runtime\Stack\StackReader;
 use Milpa\Runtime\Stack\ComposeProjection;
 use Milpa\Runtime\Tests\Fixtures\Stack\DeclaringProvider;
 use Milpa\Runtime\Tests\Fixtures\Stack\FakeProbe;
+use Milpa\Runtime\Tests\Fixtures\Stack\FakeSignatureProbe;
 use Milpa\Runtime\Tests\Fixtures\Stack\HubPlugin;
 use Milpa\Runtime\Tests\Fixtures\Stack\RivalHubPlugin;
 use Milpa\Container\DIContainer;
@@ -27,6 +28,7 @@ use Milpa\Runtime\Kernel;
 use Milpa\Runtime\Stack\EnvVar;
 use Milpa\Runtime\Stack\PortMapping;
 use Milpa\Runtime\Stack\ServiceDeclaration;
+use Milpa\Runtime\Stack\ServiceSignature;
 use PHPUnit\Framework\TestCase;
 
 final class StackReaderTest extends TestCase
@@ -61,6 +63,37 @@ final class StackReaderTest extends TestCase
         self::assertSame('DeclaringProvider', $byName['alpha']['plugin']);
         self::assertSame([], $byName['alpha']['conflictsWith']);
         self::assertSame([], $source->conflicts(), 'four distinct names, no collision');
+    }
+
+    public function testASignatureTellsTheServiceFromWhateverElseTookItsPort(): void
+    {
+        $hub = new ServiceSignature('/.well-known/mercure', [400, 401]);
+        $provider = new DeclaringProvider([
+            new ServiceDeclaration(name: 'hub', image: 'h', ports: [new PortMapping(container: 80, host: 3000)], signature: $hub),
+            new ServiceDeclaration(name: 'squatted', image: 'h', ports: [new PortMapping(container: 80, host: 3001)], signature: $hub),
+            new ServiceDeclaration(name: 'mute', image: 'h', ports: [new PortMapping(container: 80, host: 3002)], signature: $hub),
+            new ServiceDeclaration(name: 'stopped', image: 'h', ports: [new PortMapping(container: 80, host: 3003)], signature: $hub),
+            new ServiceDeclaration(name: 'plain', image: 'p', ports: [new PortMapping(container: 80, host: 3004)]),
+            new ServiceDeclaration(name: 'closed-hub', image: 'h', ports: [new PortMapping(container: 80, host: 3005)], signature: $hub),
+        ]);
+        // 3001 answers 404 (the next-server that took :3000 in greenhouse evidence/1035); 3002 accepts and says nothing HTTP.
+        $signatures = new FakeSignatureProbe([3000 => 400, 3001 => 404, 3002 => null, 3005 => 401]);
+        $source = new StackReader(new DIContainer(), new FakeProbe([3000, 3001, 3002, 3004, 3005]), new ComposeProjection(), $provider, $signatures);
+
+        $byName = array_column($source->snapshot()['services'], null, 'name');
+
+        self::assertSame('up', $byName['hub']['state'], 'the port answers as the hub must');
+        self::assertSame('up', $byName['closed-hub']['state'], 'a hub that refuses anonymous subscribers answers 401: still the hub');
+        self::assertSame(400, $byName['hub']['answered']);
+        self::assertSame(StackReader::OCCUPIED, $byName['squatted']['state'], 'the port accepts, but not as the hub: something else took it');
+        self::assertSame(404, $byName['squatted']['answered'], 'what it answered instead is said');
+        self::assertSame(StackReader::OCCUPIED, $byName['mute']['state']);
+        self::assertNull($byName['mute']['answered']);
+        self::assertSame('down', $byName['stopped']['state']);
+        self::assertSame('up', $byName['plain']['state'], 'a declaration that names no signature still reads by TCP');
+        self::assertNull($byName['plain']['answered']);
+        // Only a port that ACCEPTS and a declaration that NAMES a signature is asked — never a refused port.
+        self::assertSame([[3005, '/.well-known/mercure'], [3000, '/.well-known/mercure'], [3002, '/.well-known/mercure'], [3001, '/.well-known/mercure']], $signatures->asked, 'in row order: closed-hub, hub, mute, squatted');
     }
 
     public function testASecretHasNoDisplayAndTheGlyphIsTheRenderersNotTheSources(): void

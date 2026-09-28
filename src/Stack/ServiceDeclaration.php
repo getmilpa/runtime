@@ -27,14 +27,16 @@ final readonly class ServiceDeclaration
     public const NAME_PATTERN = '/^[a-z][a-z0-9-]{0,62}$/';
 
     /**
-     * @param string            $name       the service name, as compose would key it (`^[a-z][a-z0-9-]{0,62}$`)
-     * @param string            $image      the container image, e.g. `dunglas/mercure`
-     * @param list<PortMapping> $ports      the ports the service listens on, with the host port when it is published
-     * @param list<EnvVar>      $env        the environment the service reads
-     * @param list<string>      $volumes    compose-style `source:target[:mode]` entries, or named volumes
-     * @param list<string>      $command    an explicit command, empty for the image's default
-     * @param string            $summary    why the plugin needs it — one line for a human
-     * @param int|null          $healthPort the host port a reachability probe should try; defaults to the first published port
+     * @param string                $name       the service name, as compose would key it (`^[a-z][a-z0-9-]{0,62}$`)
+     * @param string                $image      the container image, e.g. `dunglas/mercure`
+     * @param list<PortMapping>     $ports      the ports the service listens on, with the host port when it is published
+     * @param list<EnvVar>          $env        the environment the service reads
+     * @param list<string>          $volumes    compose-style `source:target[:mode]` entries, or named volumes
+     * @param list<string>          $command    an explicit command, empty for the image's default
+     * @param string                $summary    why the plugin needs it — one line for a human
+     * @param int|null              $healthPort the host port a reachability probe should try; defaults to the first published port
+     * @param ServiceSignature|null $signature  what the service answers on that port that a squatter would not; without one, a
+     *                                          port that accepts reads as the service (greenhouse decisions/0504)
      */
     public function __construct(
         public string $name,
@@ -45,6 +47,7 @@ final readonly class ServiceDeclaration
         public array $command = [],
         public string $summary = '',
         public ?int $healthPort = null,
+        public ?ServiceSignature $signature = null,
     ) {
         if (preg_match(self::NAME_PATTERN, $name) !== 1) {
             throw new \InvalidArgumentException(\sprintf('Service name «%s» must match %s.', $name, self::NAME_PATTERN));

@@ -23,9 +23,9 @@ namespace Milpa\Runtime\Stack;
  * and a reader says so next to the state ({@see self::host()}).
  *
  * A refused or timed-out connection is `false`, never an exception — a service that is down is a
- * state a reader reports, not an error it raises. It says nothing about WHAT answered:
- * a port that accepts is "up" even if something else took it, which is exactly what the operator
- * needs to know first.
+ * state a reader reports, not an error it raises. It says nothing about WHAT answered: a port
+ * that accepts is reachable even if something else took it. Telling the service from a squatter is
+ * the declaration's {@see ServiceSignature}, asked by a {@see SignatureProbe} (greenhouse decisions/0504).
  */
 final class TcpProbe implements ReachabilityProbe
 {
