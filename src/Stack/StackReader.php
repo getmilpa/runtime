@@ -25,8 +25,10 @@ use Milpa\Runtime\Kernel;
  * table uses. For each declaration the snapshot carries the declaration (image, ports, env, volumes,
  * command, summary, the declaring plugin), the env with its values RESOLVED — a secret has no value here
  * and none downstream; the glyph a human sees is the renderer's —, the service's compose fragment, and
- * its state: `up` when the probe port accepts TCP on the probe's host, `down` when it refuses, `unknown`
- * when the service publishes no port to probe, `conflict` when another plugin declared the same name.
+ * its state: `up` when the probe port accepts TCP on the probe's host — and, when the declaration names a
+ * {@see ServiceSignature}, answers it as declared —, `occupied` when it accepts but answers otherwise
+ * (something else took the port), `down` when it refuses, `unknown` when the service publishes no port to
+ * probe, `conflict` when another plugin declared the same name.
  * A collision drops nothing: every colliding row is kept and names the others, because a compose file
  * keys services by name and two declarations under one key would silently overwrite each other.
  * Nothing here starts or stops anything (greenhouse decisions/0201). Reading what was declared is not
@@ -48,20 +50,28 @@ final class StackReader
     public const CONFLICT = 'conflict';
 
     /**
-     * @param object|null $fallbackProvider a provider to read when no kernel is in the container (tests)
+     * The port answers, but not the way the declared service must: something else took it
+     * (greenhouse decisions/0504). Only a declaration with a {@see ServiceSignature} can be read so.
+     */
+    public const OCCUPIED = 'occupied';
+
+    /**
+     * @param object|null         $fallbackProvider a provider to read when no kernel is in the container (tests)
+     * @param SignatureProbe|null $signatures       asks a declared signature; defaults to one HTTP request to the reachability probe's host
      */
     public function __construct(
         private readonly DIContainerInterface $container,
         private readonly ReachabilityProbe $probe,
         private readonly ComposeProjection $projection,
         private readonly ?object $fallbackProvider = null,
+        private ?SignatureProbe $signatures = null,
     ) {
     }
 
     /**
      * The services table, sorted by name, each with its resolved env, compose fragment and probed state.
      *
-     * @return array{kernel: bool, services: list<array{name: string, image: string, ports: list<string>, env: list<array{name: string, source: string, display: string|null, configKey: string|null}>, volumes: list<string>, command: list<string>, summary: string, plugin: string, probeHost: string, probePort: int|null, state: string, conflictsWith: list<string>, compose: string}>}
+     * @return array{kernel: bool, services: list<array{name: string, image: string, ports: list<string>, env: list<array{name: string, source: string, display: string|null, configKey: string|null}>, volumes: list<string>, command: list<string>, summary: string, plugin: string, probeHost: string, probePort: int|null, state: string, answered: int|null, conflictsWith: list<string>, compose: string}>}
      */
     public function snapshot(): array
     {
@@ -160,7 +170,7 @@ final class StackReader
     /**
      * @param list<string> $collision every plugin class that declared this name, when more than one did
      *
-     * @return array{name: string, image: string, ports: list<string>, env: list<array{name: string, source: string, display: string|null, configKey: string|null}>, volumes: list<string>, command: list<string>, summary: string, plugin: string, probeHost: string, probePort: int|null, state: string, conflictsWith: list<string>, compose: string}
+     * @return array{name: string, image: string, ports: list<string>, env: list<array{name: string, source: string, display: string|null, configKey: string|null}>, volumes: list<string>, command: list<string>, summary: string, plugin: string, probeHost: string, probePort: int|null, state: string, answered: int|null, conflictsWith: list<string>, compose: string}
      */
     private function row(ServiceDeclaration $service, string $plugin, ?Config $config, array $collision): array
     {
@@ -177,11 +187,18 @@ final class StackReader
 
         $conflictsWith = self::others($collision, $plugin);
         $probePort = $service->probePort();
+        $answered = null;
         $state = match (true) {
             $collision !== [] => self::CONFLICT,
             $probePort === null => 'unknown',
-            default => $this->probe->reachable($probePort) ? 'up' : 'down',
+            $this->probe->reachable($probePort) => 'up',
+            default => 'down',
         };
+        // A port that accepts is the service only if it answers as the service must, when it says how.
+        if ($state === 'up' && $probePort !== null && $service->signature !== null) {
+            $answered = $this->signatures()->answer($probePort, $service->signature);
+            $state = $service->signature->matches($answered) ? 'up' : self::OCCUPIED;
+        }
 
         return [
             'name' => $service->name,
@@ -195,6 +212,8 @@ final class StackReader
             'probeHost' => $this->probe->host(),
             'probePort' => $probePort,
             'state' => $state,
+            // What the port answered the signature with — null when nothing was asked or no HTTP came back.
+            'answered' => $answered,
             'conflictsWith' => $conflictsWith,
             'compose' => $this->projection->yaml([$service], $config),
         ];
@@ -216,6 +235,12 @@ final class StackReader
         }
 
         return array_values(array_map(self::shortName(...), $collision));
+    }
+
+    /** The signature probe, built on first use against the reachability probe's host. */
+    private function signatures(): SignatureProbe
+    {
+        return $this->signatures ??= new HttpSignatureProbe($this->probe->host());
     }
 
     private static function shortName(string $class): string
